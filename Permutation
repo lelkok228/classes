@@ -1,0 +1,201 @@
+#pragma once
+
+#include <iostream>
+
+void copy_(const int* inFirst, const int* inLast, int* outFirst) {
+    while (inFirst != inLast) {
+        *outFirst++ = *inFirst++;
+    }
+}
+
+void swap_(int& x, int& y) {
+    int t = x;
+    x = y;
+    y = t;
+}
+
+void reverse_(int* first, int* last) {
+    while (first < last - 1) {
+        swap_(*first++, *(--last));
+    }
+}
+
+class Permutation {
+public:
+
+    Permutation(const Permutation& curPerm)
+        : n_(curPerm.n_)
+    {
+        perm_ = new int[curPerm.n_];
+        copy_(curPerm.perm_, curPerm.perm_ + curPerm.n_, perm_);
+    }
+
+    Permutation(const unsigned int& newN = 0)
+        : n_(newN)
+    {
+        perm_ = new int[n_];
+        for (unsigned int i = 0; i < n_; ++i) {
+            perm_[i] = i;
+        }
+    }
+
+    Permutation(const unsigned int& newN, const int* a)
+        : n_(newN)
+    {
+        perm_ = new int[newN];
+        copy_(a, a + newN, perm_);
+    }
+
+    ~Permutation() {
+        delete[] perm_;
+    }
+
+    Permutation& operator=(const Permutation& curPerm) {
+        if (this == &curPerm) {
+            return *this;
+        }
+
+        if (perm_) {
+            delete[] perm_;
+        }
+
+        n_ = curPerm.n_;
+        perm_ = new int[curPerm.n_];
+        copy_(curPerm.perm_, curPerm.perm_ + n_, perm_);
+
+        return *this;
+    }
+
+    Permutation operator*(const Permutation& rightPerm) const {
+        Permutation resPerm(n_);
+        for (unsigned int i = 0; i < n_; ++i) {
+            resPerm.perm_[i] = perm_[rightPerm.perm_[i]];
+        }
+        return resPerm;
+    }
+
+    Permutation& operator*=(const Permutation& curPerm) {
+        *this = *this * curPerm;
+        return *this;
+    }
+
+    Permutation& operator++() {
+        updPermutation_(true);
+        return *this;
+    }
+
+    Permutation& operator--() {
+        updPermutation_(false);
+        return *this;
+    }
+
+    Permutation operator++(int) {
+        Permutation resPerm = *this;
+        updPermutation_(true);
+        return resPerm;
+    }
+
+    Permutation operator--(int) {
+        Permutation resPerm = *this;
+        updPermutation_(false);
+        return resPerm;
+    }
+
+    Permutation next() {
+        Permutation resPerm = *this;
+        return ++resPerm;
+    }
+
+    Permutation previous() {
+        Permutation resPerm = *this;
+        return --resPerm;
+    }
+
+    bool operator==(const Permutation& curPerm) const {
+        if (n_ != curPerm.n_) {
+            return false;
+        }
+
+        for (unsigned int i = 0; i < n_; ++i) {
+            if (perm_[i] != curPerm.perm_[i]) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    bool operator!=(const Permutation& curPerm) const {
+        return !(*this == curPerm);
+    }
+
+    bool operator<(const Permutation& curPerm) const {
+
+        for (unsigned int i = 0; i < n_; ++i) {
+            if (perm_[i] != curPerm.perm_[i]) {
+                return perm_[i] < curPerm.perm_[i];
+            }
+        }
+
+        return false;
+    }
+
+    bool operator>(const Permutation& curPerm) const {
+        return curPerm < *this;
+    }
+
+    bool operator<=(const Permutation& curPerm) const {
+        return !(*this > curPerm);
+    }
+
+    bool operator>=(const Permutation& curPerm) const {
+        return !(*this < curPerm);
+    }
+
+    int operator[](const int& index) const {
+        return perm_[index];
+    }
+
+    Permutation inverse() const {
+        Permutation resPerm(n_);
+        for (unsigned int i = 0; i < n_; ++i) {
+            resPerm.perm_[perm_[i]] = i;
+        }
+        return resPerm;
+    }
+
+    void operator()(int* a) const {
+        int* newA = new int[n_];
+        for (unsigned int i = 0; i < n_; ++i) {
+            newA[perm_[i]] = a[i];
+        }
+
+        copy_(newA, newA + n_, a);
+
+        delete[] newA;
+    }
+
+private:
+    unsigned int n_;
+    int* perm_;
+
+    void updPermutation_(const bool resCompare) {
+        int index = static_cast<int>(n_) - 2;
+        while (index >= 0 && (perm_[index] > perm_[index + 1]) == resCompare) {
+            --index;
+        }
+
+        if (index == -1) {
+            return ;
+        }
+
+        for (unsigned int i = n_ - 1; ; i--) {
+            if ((perm_[i] > perm_[index]) == resCompare)  {
+                swap_(perm_[i], perm_[index]);
+                break;
+            }
+        }
+
+        reverse_(perm_ + index + 1, perm_ + n_);
+    }
+};
