@@ -1,0 +1,117 @@
+#include <iostream>
+
+using namespace std;
+
+//maybe i should use long long instead int, but i dont know the limitations
+
+template<unsigned N, int D>
+struct checkPrime {
+    static const bool isPrime = checkPrime<N, D - 1>::isPrime && (N % D != 0);
+};
+
+template<unsigned N>
+struct checkPrime<N, 1> {
+    static const bool isPrime = true;
+};
+
+template<unsigned N>
+struct checkPrime<N, 0> {
+    static const bool isPrime = true;
+};
+
+struct ClassCE {
+    virtual void doCE();
+};
+
+template<bool T>
+struct isItNotCE {};
+
+template<>
+struct isItNotCE<false> {
+    ClassCE ce_;
+};
+
+template<unsigned N> //if N <= 0 than should add checkPrime<N, -1>
+class Finite {
+public:
+    Finite(const int other = 0) : num(other % N) {}
+    Finite(const Finite& otherFinite) : num(otherFinite.num % N) {}
+
+    Finite& operator=(const Finite& otherFinite) {
+        num = otherFinite.num;
+    }
+
+    Finite& operator+=(const Finite& otherFinite) {
+        num += otherFinite.num;
+        if (num >= N) {
+            num -= N;
+        }
+        return *this;
+    }
+
+    Finite& operator-=(const Finite& otherFinite) {
+        num -= otherFinite.num;
+        if (num < 0) {
+            num += N;
+        }
+        return *this;
+    }
+
+    Finite& operator*=(const Finite& otherFinite) {
+        num = (num * otherFinite.num) % N;
+        return *this;
+    }
+
+    Finite& operator/=(const Finite& otherFinite) {
+        isItNotCE<checkPrime<N, N - 1>::isPrime> test;
+        *this *= otherFinite.binPow(N - 2); //if otherFinite.num == 0 return 1 / 0;
+    }
+
+    Finite operator+(const Finite& otherFinite) const {
+        Finite resFinite = *this;
+        return resFinite += otherFinite;
+    }
+
+    Finite operator-(const Finite& otherFinite) const {
+        Finite resFinite = *this;
+        return resFinite -= otherFinite;
+    }
+
+    Finite operator*(const Finite& otherFinite) const {
+        Finite resFinite = *this;
+        return resFinite *= otherFinite;
+    }
+
+    Finite operator/(const Finite& otherFinite) const {
+        Finite resFinite = *this;
+        return resFinite /= otherFinite;
+    }
+
+    Finite binPow(const int k) const {
+        int curK = k;
+        Finite resFinite = 1;
+        Finite curFinite = *this;
+
+        while (curK) {
+            if (curK & 1) {
+                resFinite *= curFinite;
+            }
+            curFinite *= curFinite;
+            curK >>= 1;
+        }
+
+        return resFinite;
+    }
+
+private:
+    unsigned num;
+};
+
+/*int main() {
+    Finite<8> a = 3;
+    for (int i = 1; i <= 7; ++i) {
+        Finite<8> b = i;
+        Finite<8> c = a / b;
+    }
+    return 0;
+}*/
