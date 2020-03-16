@@ -1,0 +1,916 @@
+#pragma once
+
+#include <iostream>
+#include <complex>
+#include <vector>
+#include <string>
+
+
+size_t Max (const size_t& first, const size_t& second) { return first > second ? first : second; }
+
+class BigInteger{
+
+    public:
+
+        BigInteger () : _size(1), _sign(1), _digit(1, 0) {}
+        BigInteger (int);
+        BigInteger (const BigInteger& old) : _size(old._size), _sign(old._sign), _digit(old._digit) {}
+        BigInteger (const std::string& s);
+
+        BigInteger& operator= (const BigInteger&);
+
+        void incOrDec (const BigInteger& other, bool mode);
+        BigInteger& operator+= (const BigInteger& other) { incOrDec(other, false); return *this; }
+        BigInteger& operator-= (const BigInteger& other) { incOrDec(other, true); return *this; }
+
+        BigInteger operator- () const;
+
+        BigInteger& operator*= (const BigInteger& other);
+
+        BigInteger& operator/= (const BigInteger& other);
+        BigInteger& operator%= (const BigInteger& other);
+
+        friend std::ostream& operator<< (std::ostream&, const BigInteger&);
+        friend std::istream& operator>> (std::istream&, BigInteger&);
+
+        std::string toString() const;
+
+        explicit operator bool () const { return ! _isZero(); }
+
+        bool isAbsoluteLessThen (const BigInteger&) const;
+
+        bool isAbsoluteLessOrEqualThen (const BigInteger& other) const { return isAbsoluteLessThen(other) || _digit == other._digit; }
+
+        bool isSignEqualTo (const BigInteger& other) const { return _sign == other._sign; }
+
+        bool isSignLessThen (const BigInteger& other) const { return _sign < other._sign; }
+
+        bool isNegative () const { return _sign == -1; }
+
+        bool isDigitEqualTo (const BigInteger& other) const { return _digit == other._digit; }
+
+    private:
+
+        size_t _size;
+        int _sign;
+        std::vector<int> _digit;
+
+        static const long long _BASE = 1000000000;
+        static const size_t _ELEMENT_LENGTH = 9;
+
+        void _setN0 (const size_t& length);
+
+        void _sumOfAbsolute (const BigInteger& other, const int& resultSign);
+
+        void _subtractionOfAbsolute (const BigInteger& other, const int& resultSign, const int& reverseSign);
+
+        bool _isZero () const { return _size == 1 && _digit[0] == 0; }
+
+        void _removeZeros ();
+
+        std::string _wholeDigit(const int& index) const;
+
+        BigInteger _div2() const;
+};
+
+BigInteger::BigInteger (int integer){
+    _sign = integer >= 0 ? 1 : -1;
+    _digit.clear();
+    if (integer < 0)
+        integer = -integer;
+    do{
+        _digit.emplace_back(integer % _BASE);
+        integer /= _BASE;
+    } while (integer);
+    _size = _digit.size();
+}
+
+BigInteger& BigInteger::operator= (const BigInteger& old){
+    if (this == &old) return *this;
+    _size = old._size;
+    _sign = old._sign;
+    _digit = old._digit;
+    return *this;
+}
+
+void BigInteger::incOrDec(const BigInteger& other, bool mode){
+    if ((_sign == other._sign) ^ mode)
+        _sumOfAbsolute(other, _sign);
+    else{
+        int resultSign = _sign;
+        int reverseSign = 1;
+        if (isAbsoluteLessThen(other)){
+            resultSign = (mode ? -1 : 1) *  other._sign;
+            reverseSign = -1;
+        }
+        _subtractionOfAbsolute(other, resultSign, reverseSign);
+    }
+}
+
+BigInteger BigInteger::operator- () const{
+    BigInteger negativeCopy = *this;
+    if (!_isZero()) negativeCopy._sign = -negativeCopy._sign;
+    return negativeCopy;
+}
+
+typedef std::complex<long double> cld;
+
+std::vector<cld> FFT(std::vector<cld> &p, cld w){
+	size_t p_size = p.size();
+	if (p_size == 1){
+		return p;
+	}
+
+    std::vector<cld> A(p_size / 2), B(p_size / 2);
+    for (size_t i = 0; i < p_size; i += 2){
+        A[i / 2] = p[i];
+        B[i / 2] = p[i + 1];
+    }
+
+	A = FFT(A, w * w);
+	B = FFT(B, w * w);
+
+	std::vector<cld> ans(p_size);
+	cld cur_w = cld(1, 0);
+	for (size_t i = 0; i < p_size / 2; i++){
+		ans[i] = A[i] + cur_w * B[i];
+		ans[i + p_size / 2] = A[i] - cur_w * B[i];
+		cur_w *= w;
+	}
+
+	return ans;
+}
+
+BigInteger& BigInteger::operator*= (const BigInteger& other){
+    std::vector<cld> complex_this(this->_size), complex_other(other._size);
+	for (size_t i = 0; i < this->_size; i++){
+		complex_this[i] = cld(this->_digit[i], 0);
+    }
+    for (size_t i = 0; i < other._size; i++){
+        complex_other[i] = cld(other._digit[i], 0);
+    }
+
+	size_t power2 = 1;
+	while (power2 < complex_this.size() || power2 < complex_other.size())
+		power2 *= 2;
+    power2 *= 2;
+
+	while (complex_this.size() < power2){
+		complex_this.emplace_back(0);
+	}
+	while (complex_other.size() < power2){
+		complex_other.emplace_back(0);
+	}
+
+    const long double PI = acos(-1);
+	cld w = std::polar((long double) 1, 2 * PI / power2);
+	complex_this = FFT(complex_this, w);
+	complex_other = FFT(complex_other, w);
+
+	std::vector<cld> result(power2);
+	for (size_t i = 0; i < power2; i++){
+		result[i] = complex_this[i] * complex_other[i];
+	}
+
+    w = std::polar((long double)1, -2 * PI / power2);
+	result = FFT(result, w);
+
+	std::vector<int> ans(power2);
+	long long stock = 0;
+	for (size_t i = 0; i < power2; i++){
+		stock += std::floor(result[i].real() / power2 + 0.5);
+		ans[i] = stock % _BASE;
+		stock /= _BASE;
+	}
+
+	this->_sign *= other._sign;
+	this->_size = ans.size();
+	this->_digit = ans;
+	this->_removeZeros();
+}
+
+std::string BigInteger::toString() const{
+    std::string result = "";
+    if (_sign == -1)
+        result += "-";
+    result += std::to_string(_digit[_size - 1]);
+
+    if (_size > 2){
+        for (size_t index = _size - 2; index > 0; --index){
+            result += _wholeDigit(index);
+        }
+    }
+
+    if (_size > 1)
+        result += _wholeDigit(0);
+
+    return result;
+}
+
+BigInteger::BigInteger (const std::string& line){
+    _digit.clear();
+
+    size_t intBegin = 0;
+    if (line[intBegin] == '-'){
+        _sign = -1;
+        intBegin++;
+    }
+    else
+        _sign = 1;
+
+    size_t currentLength = 0;
+    unsigned int currentDigit = 0;
+    unsigned int powerOf10 = 1;
+    for (size_t lastAdded = line.length() - 1; lastAdded > intBegin; lastAdded--){
+        currentDigit += powerOf10 * (line[lastAdded] - '0');
+        currentLength++;
+        powerOf10 *= 10;
+        if (currentLength == _ELEMENT_LENGTH){
+            _digit.emplace_back(currentDigit);
+            currentDigit = 0;
+            currentLength = 0;
+            powerOf10 = 1;
+        }
+    }
+
+    currentDigit += powerOf10 * (line[intBegin] - '0');
+    _digit.emplace_back(currentDigit);
+    _size = _digit.size();
+}
+
+
+bool BigInteger::isAbsoluteLessThen (const BigInteger& other) const{
+    if (_size != other._size)
+        return _size < other._size;
+
+    for (size_t i = _size - 1; i > 0; --i){
+        if (_digit[i] != other._digit[i])
+            return _digit[i] < other._digit[i];
+    }
+
+    return _digit[0] < other._digit[0];
+}
+
+void BigInteger::_setN0 (const size_t& length){
+    _size = length;
+    _sign = 1;
+    _digit.assign(length, 0);
+}
+
+void BigInteger::_sumOfAbsolute (const BigInteger& other, const int& resultSign){
+    long long piggyBank = 0;
+    _sign = resultSign;
+    size_t resultSize = Max(_size, other._size) + 1;
+    _digit.resize(resultSize);
+
+    for (size_t i = 0; i < resultSize; ++i){
+        if (i <_size)
+            piggyBank += _digit[i];
+        if (i < other._size){
+            piggyBank += other._digit[i];
+        }
+
+        if (piggyBank >= _BASE){
+            _digit[i] = piggyBank - _BASE;
+            piggyBank = 1;
+        }
+        else{
+            _digit[i] = piggyBank;
+            piggyBank = 0;
+        }
+    }
+
+    _size = resultSize;
+    _removeZeros();
+}
+
+void BigInteger::_subtractionOfAbsolute (const BigInteger& other, const int& resultSign, const int& reverseSign){
+    long long piggyBank = 0;
+    _sign = resultSign;
+    size_t resultSize = Max(_size, other._size);
+    _digit.resize(resultSize);
+
+    for (size_t i = 0; i < resultSize; ++i){
+        if (i < _size)
+            piggyBank += reverseSign * _digit[i];
+        if (i < other._size){
+            piggyBank -= reverseSign * other._digit[i];
+        }
+
+        if (piggyBank < 0){
+            _digit[i] = piggyBank + _BASE;
+            piggyBank = -1;
+        }
+        else{
+            _digit[i] = piggyBank;
+            piggyBank = 0;
+        }
+    }
+
+    _size = resultSize;
+    _removeZeros();
+}
+
+void BigInteger::_removeZeros (){
+    while (_size > 1 && _digit.back() == 0){
+        _digit.pop_back();
+        _size--;
+    }
+
+    if (_size == 1 && _digit[0] == 0)
+        _sign = 1;
+}
+
+std::string BigInteger::_wholeDigit(const int& index) const{
+    std::string result = std::to_string(_digit[index]);
+    while (result.length() < _ELEMENT_LENGTH)
+        result = "0" + result;
+    return result;
+}
+
+BigInteger BigInteger::_div2() const{
+    int divisor = 2;
+    BigInteger result = *this;
+    long long piggyBank = 0;
+
+    for (int i = result._size - 1; i >= 0; --i){
+        piggyBank += result._digit[i];
+        result._digit[i] = piggyBank / divisor;
+        piggyBank = (piggyBank % divisor) * _BASE;
+    }
+
+    result._removeZeros();
+    return result;
+}
+
+bool operator== (const BigInteger& first, const BigInteger& second){
+    return first.isSignEqualTo(second) && first.isDigitEqualTo(second);
+}
+
+bool operator!= (const BigInteger& first, const BigInteger& second){
+    return !(first == second);
+}
+
+bool operator< (const BigInteger& first, const BigInteger& second){
+    if (! first.isSignEqualTo(second))
+        return first.isSignLessThen(second);
+    else
+        return first.isNegative() ? second.isAbsoluteLessThen(first) : first.isAbsoluteLessThen(second);
+}
+
+bool operator> (const BigInteger& first, const BigInteger& second){
+    return second < first;
+}
+
+bool operator<= (const BigInteger& first, const BigInteger& second){
+    return !(first > second);
+}
+
+bool operator>= (const BigInteger& first, const BigInteger& second){
+    return !(first < second);
+}
+
+BigInteger operator+ (const BigInteger& first, const BigInteger& second){
+    BigInteger result = first;
+    result += second;
+    return result;
+}
+
+BigInteger& operator++ (BigInteger& current){
+    current += 1;
+    return current;
+}
+BigInteger operator++ (BigInteger& current, int){
+    BigInteger old = current;
+    current += 1;
+    return old;
+}
+
+BigInteger operator- (const BigInteger& first, const BigInteger& second){
+    BigInteger result = first;
+    result -= second;
+    return result;
+}
+
+BigInteger& operator-- (BigInteger& current){
+    current -= 1;
+    return current;
+}
+BigInteger operator-- (BigInteger& current, int){
+    BigInteger old = current;
+    current -= 1;
+    return old;
+}
+
+BigInteger operator* (const BigInteger& first, const BigInteger& second){
+    BigInteger result = first;
+    result *= second;
+    return result;
+}
+
+BigInteger& BigInteger::operator/= (const BigInteger& other) {
+    BigInteger leftBorder = 0;
+    BigInteger rightBorder = *this;
+    rightBorder._sign = 1;
+    rightBorder += 1;
+    BigInteger middle;
+
+    while (1 + leftBorder < rightBorder){
+        middle = (leftBorder + rightBorder)._div2();
+        if ((middle * other).isAbsoluteLessOrEqualThen(*this))
+            leftBorder = middle;
+        else
+            rightBorder = middle;
+    }
+
+    leftBorder._sign =_sign * other._sign;
+    leftBorder._removeZeros();
+    *this = leftBorder;
+    return *this;
+}
+BigInteger operator/ (const BigInteger& first, const BigInteger& second){
+    BigInteger result = first;
+    result /= second;
+    return result;
+}
+
+BigInteger& BigInteger::operator%= (const BigInteger& other) {
+    *this = *this - (*this / other) * other;
+    return *this;
+}
+BigInteger operator% (const BigInteger& first, const BigInteger& second){
+    BigInteger result = first;
+    result %= second;
+    return result;
+}
+
+std::ostream& operator<< (std::ostream& out, const BigInteger& toPrint){
+    out << toPrint.toString();
+    return out;
+}
+
+std::istream& operator>> (std::istream& in, BigInteger& toRead){
+    std::string line;
+    in >> line;
+    toRead = line;
+    return in;
+}
+
+
+
+void MakePositive(BigInteger& bigint){
+    if (bigint < 0)
+        bigint *= -1;
+}
+
+BigInteger GCD (const BigInteger& first, const BigInteger& second) {
+    BigInteger _pair[] = {first, second};
+    MakePositive(_pair[0]); MakePositive(_pair[1]);
+    std::pair<int, int> index = {0, 1};
+    while (_pair[index.first]){
+        _pair[index.second] %= _pair[index.first];
+        std::swap(index.first, index.second);
+    }
+
+    if (first <= 0 && second <= 0)
+        _pair[index.second] *= -1;
+    return _pair[index.second];
+}
+
+BigInteger BinPow(const BigInteger& bigint, unsigned int grad){
+    BigInteger result = 1;
+    BigInteger bigintInCurrentGrad = bigint;
+    for (unsigned long long currentGrad = 1; currentGrad <= grad; currentGrad <<= 1){
+        if (currentGrad & grad){
+            result *= bigintInCurrentGrad;
+        }
+        bigintInCurrentGrad = bigintInCurrentGrad * bigintInCurrentGrad;
+    }
+    return result;
+}
+
+double ToDouble(const std::string& stringDouble = "0"){
+    double beforePoint = 0;
+    double afterPoint = 0;
+    size_t index = 0;
+    double sign = 1;
+    if (stringDouble[0] == '-'){
+        sign = -1;
+        index = 1;
+    }
+    while (index < stringDouble.size() && stringDouble[index] != '.'){
+        double digit = stringDouble[index] - '0';
+        beforePoint = beforePoint * 10 + digit;
+        ++index;
+    }
+
+    size_t dotIndex = index;
+    index = stringDouble.size() - 1;
+    while (index > dotIndex){
+        double digit = stringDouble[index] - '0';
+        afterPoint = (afterPoint + digit) * 0.1;
+        --index;
+    }
+
+    return sign * (beforePoint + afterPoint);
+}
+
+class Rational{
+
+    public:
+
+        Rational (int integer = 0) : _numerator(integer), _denominator(1) {}
+
+        Rational (const BigInteger& bigint) : _numerator(bigint), _denominator(1) {}
+
+        Rational (const Rational& old) : _numerator(old._numerator), _denominator(old._denominator) {}
+
+        Rational& operator= (const Rational& old) {
+            _numerator = old._numerator;
+            _denominator = old._denominator;
+            return *this;
+        }
+
+        Rational& operator+= (const Rational& other) {
+            _numerator *= other._denominator;
+            _numerator += other._numerator * _denominator;
+            _denominator *= other._denominator;
+            Normalize();
+            return *this;
+        }
+
+        Rational& operator-= (const Rational& other) {
+            _numerator *= other._denominator;
+            _numerator -= other._numerator * _denominator;
+            _denominator *= other._denominator;
+            Normalize();
+            return *this;
+        }
+
+        Rational& operator*= (const Rational& other) {
+            _numerator *= other._numerator;
+            _denominator *= other._denominator;
+            Normalize();
+            return *this;
+        }
+
+        Rational operator- () {
+            Rational result = *this;
+            result *= -1;
+            return result;
+        }
+
+        Rational& operator/= (const Rational& other) {
+            _numerator *= other._denominator;
+            _denominator *= other._numerator;
+            Normalize();
+            return *this;
+        }
+
+        bool isLess (const Rational& other) const {
+            return _numerator * other._denominator < other._numerator * _denominator;
+        }
+
+        bool isEqual (const Rational& other) const {
+            return _numerator == other._numerator && _denominator == other._denominator;
+        }
+
+        void Normalize() {
+            MakeCoprime();
+            if (_denominator < 0){
+                _numerator *= -1;
+                _denominator *= -1;
+            }
+        }
+
+        void MakeCoprime() {
+            BigInteger gcd = GCD(_numerator, _denominator);
+            _numerator /= gcd;
+            _denominator /= gcd;
+        }
+
+        std::string toString() const{
+            std::string result = _numerator.toString();
+            if (_denominator != 1)
+                result += "/" + _denominator.toString();
+            return result;
+        }
+
+        std::string asDecimal(size_t precision = 0) const {
+            const BigInteger base = 10;
+            BigInteger intResult = (_numerator * BinPow(base, precision)) / _denominator;
+            std::string result = intResult.toString();
+
+            std::string sign = "";
+            if (result[0] == '-'){
+                sign = "-";
+                result = result.substr(1, result.size() - 1);
+            }
+            while (result.size() < precision + 1)
+                result = "0" + result;
+
+            size_t decimalPart = result.size() - precision;
+            if (precision)
+                return sign + result.substr(0, decimalPart) + "." + result.substr(decimalPart, precision);
+            else
+                return sign + result;
+        }
+
+        explicit operator double() const{
+            const size_t precision = 15;
+            return ToDouble(asDecimal(precision));
+        }
+
+    private:
+        BigInteger _numerator;
+        BigInteger _denominator;
+};
+
+Rational operator+ (const Rational& first, const Rational& second){
+    Rational result = first;
+    result += second;
+    return result;
+}
+
+Rational operator- (const Rational& first, const Rational& second){
+    Rational result = first;
+    result -= second;
+    return result;
+}
+
+Rational operator* (const Rational& first, const Rational& second){
+    Rational result = first;
+    result *= second;
+    return result;
+}
+
+Rational operator/ (const Rational& first, const Rational& second){
+    Rational result = first;
+    result /= second;
+    return result;
+}
+
+bool operator== (const Rational& first, const Rational& second){
+    return first.isEqual(second);
+}
+
+bool operator!= (const Rational& first, const Rational& second){
+    return !(first == second);
+}
+
+bool operator< (const Rational& first, const Rational& second){
+    return first.isLess(second);
+}
+
+bool operator> (const Rational& first, const Rational& second){
+    return second < first;
+}
+
+bool operator<= (const Rational& first, const Rational& second){
+    return !(first > second);
+}
+
+bool operator>= (const Rational& first, const Rational& second){
+    return !(first < second);
+}
+
+
+
+using namespace std;
+
+struct structCE {
+    virtual void f();
+};
+
+template<unsigned N, unsigned M>
+struct isEqual {
+    structCE ce_;
+};
+
+template<unsigned N>
+struct isEqual<N, N> {};
+
+template<unsigned N, unsigned M, typename Field = Rational>
+class Matrix {
+public:
+    Matrix() : mtr(vector<vector<Field> > (N, vector<Field> (M, 0))) {} //0 is defined in every field
+    Matrix(const vector<vector<Field> >& otherMtr) : mtr(otherMtr) {}
+
+    Matrix& operator=(const Matrix& otherMatrix) {
+        mtr = otherMatrix.mtr;
+    }
+
+    Matrix& operator+=(const Matrix& otherMatrix) {
+        for (unsigned i = 0; i < N; ++i) {
+            for (unsigned j = 0; j < M; ++j) {
+                mtr[i][j] += otherMatrix.mtr[i][j];
+            }
+        }
+        return *this;
+    }
+
+    Matrix& operator-=(const Matrix& otherMatrix) {
+        for (unsigned i = 0; i < N; ++i) {
+            for (unsigned j = 0; j < M; ++j) {
+                mtr[i][j] -= otherMatrix.mtr[i][j];
+            }
+        }
+        return *this;
+    }
+
+    Matrix& operator*=(const Field& multiplier) {
+        for (unsigned i = 0; i < N; ++i) {
+            for (unsigned j = 0; j < M; ++j) {
+                mtr[i][j] *= multiplier;
+            }
+        }
+        return *this;
+    }
+
+    Matrix operator+(const Matrix& otherMatrix) const {
+        Matrix resMatrix = *this;
+        return resMatrix += otherMatrix;
+    }
+
+    Matrix operator-(const Matrix& otherMatrix) const {
+        Matrix resMatrix = *this;
+        return resMatrix -= otherMatrix;
+    }
+
+    Matrix operator*(const Field& multiplier) {
+        Matrix resMatrix = *this;
+        return resMatrix *= multiplier;
+    }
+
+    Matrix<M, N, Field> transposed() const {
+        Matrix<M, N, Field> resMatrix;
+        for (unsigned i = 0; i < N; ++i) {
+            for (unsigned j = 0; j < M; ++j) {
+                resMatrix[j][i] = *this.mtr[i][j];
+            }
+        }
+        return resMatrix;
+    }
+
+    Matrix<N, N, Field>& operator*=(const Matrix<N, N, Field>& otherMatrix) {
+        return *this = *this * otherMatrix;
+    }
+
+    template<unsigned M_, unsigned K>
+    Matrix<N, K, Field> operator*(const Matrix<M_, K, Field>& otherMatrix) const { // Strassen algorithm in development
+        isEqual<M, M_> isEqual;
+
+        Matrix<N, K, Field> resMatrix;
+        for (unsigned i = 0; i < N; ++i) {
+            for (unsigned j = 0; j < K; ++j) {
+                for (unsigned z = 0; z < M; ++z) {
+                    resMatrix.mtr[i][j] += *this.mtr[i][z] * otherMatrix.mtr[z][j];
+                }
+            }
+        }
+
+        return resMatrix;
+    }
+
+    Field det() const {
+        isEqual<N, M> isEqual_;
+
+        Matrix curMatrix = *this;
+        unsigned ind = 0;
+        Field res = 1;
+
+        for (unsigned j = 0; j < M; ++j) {
+            if (ind == N) {
+                break;
+            }
+
+            for (unsigned i = ind; i < N; ++i) {
+                if (curMatrix[i][j] != 0) {
+                    swap(curMatrix[i], curMatrix[ind]);
+                    res = -res; // *= -1 is defined in every field? /// maybe i can use static int amount of swap rows?
+                    break;
+                }
+            }
+
+            if (curMatrix[ind][j] != 0) {
+                for (unsigned i = ind + 1; i < N; ++i) {
+                    if (curMatrix[i][j] != 0) {
+                        Field multiplier = curMatrix[i][j] / curMatrix[ind][j];
+                        for (unsigned j1 = j; j1 < M; ++j1) {
+                            curMatrix[i][j1] -= curMatrix[ind][j1] * multiplier;
+                        }
+                    }
+                }
+                ++ind;
+            }
+            else {
+                res = 0;
+                break;
+            }
+        }
+
+        for (unsigned i = 0; i < N; ++i) {
+            res *= curMatrix.mtr[i][i];
+        }
+        return res;
+    }
+
+    Field trace() const {
+        isEqual<N, M> isEqual_;
+
+        Field res = 0;
+        for (unsigned i = 0; i < N; ++i) {
+            res += *this.mtr[i][i];
+        }
+
+        return res;
+    }
+
+    unsigned rank() const { // rank is keyword?
+        Matrix curMatrix = *this;
+        unsigned ind = 0;
+        unsigned res = 0;
+
+        for (unsigned j = 0; j < M; ++j) {
+            if (ind == N) {
+                break;
+            }
+
+            for (unsigned i = ind; i < N; ++i) {
+                if (curMatrix[i][j] != 0) {
+                    swap(curMatrix[i], curMatrix[ind]);
+                    ++res;
+                    break;
+                }
+            }
+
+            if (curMatrix[ind][j] != 0) {
+                for (unsigned i = ind + 1; i < N; ++i) {
+                    if (curMatrix[i][j] != 0) {
+                        Field multiplier = curMatrix[i][j] / curMatrix[ind][j];
+                        for (unsigned j1 = j; j1 < M; ++j1) {
+                            curMatrix[i][j1] -= curMatrix[ind][j1] * multiplier;
+                        }
+                    }
+                }
+                ++ind;
+            }
+            else {
+                break;
+            }
+        }
+
+        return res;
+    }
+
+    vector<Field> getRow(unsigned i) const {
+        return *this.mtr[i];
+    }
+
+    vector<Field> getColumn(unsigned j) const {
+        vector<Field> resColumn(N);
+        for (unsigned i = 0; i < N; ++i) {
+            resColumn[i] = *this[i][j];
+        }
+        return resColumn;
+    }
+
+    /*Matrix directGauss() const { //name of the method in development
+        Matrix resMatrix = *this;
+        unsigned ind = 0;
+
+        for (unsigned j = 0; j < M; ++j) {
+            if (ind == N) {
+                break;
+            }
+
+            for (unsigned i = ind; i < N; ++i) {
+                if (resMatrix[i][j] != 0) {
+                    swap(resMatrix[i], resMatrix[ind]);
+                    break;
+                }
+            }
+
+            if (resMatrix[ind][j] != 0) {
+                for (unsigned i = ind + 1; i < N; ++i) {
+                    if (resMatrix[i][j] != 0) {
+                        Field multiplier = resMatrix[i][j] / resMatrix[ind][j];
+                        for (unsigned j1 = j; j1 < M; ++j1) {
+                            resMatrix[i][j1] -= resMatrix[ind][j1] * multiplier;
+                        }
+                    }
+                }
+                ++ind;
+            }
+        }
+
+        return resMatrix;
+    }*/ ////////////////////i dont know how use this method in det() and rank()
+
+private:
+    vector<vector<Field> > mtr;
+};
+
+int main() {
+    return 0;
+}
