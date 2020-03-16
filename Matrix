@@ -674,12 +674,109 @@ bool operator>= (const Rational& first, const Rational& second){
     return !(first < second);
 }
 
+//maybe i should use long long instead int, but i dont know the limitations
 
+template<unsigned N, int D>
+struct checkPrime {
+    static const bool isPrime = checkPrime<N, D - 1>::isPrime && (N % D != 0);
+};
 
-using namespace std;
+template<unsigned N>
+struct checkPrime<N, 1> {
+    static const bool isPrime = true;
+};
+
+template<unsigned N>
+struct checkPrime<N, 0> {
+    static const bool isPrime = true;
+};
 
 struct structCE {
-    virtual void f();
+    virtual void doCE();
+};
+
+template<bool T>
+struct isItNotCE {};
+
+template<>
+struct isItNotCE<false> {
+    structCE ce_;
+};
+
+template<unsigned N> //if N <= 0 than should add checkPrime<N, -1>
+class Finite {
+public:
+    Finite(const int other = 0) : num(other % N) {}
+    Finite(const Finite& otherFinite) : num(otherFinite.num % N) {}
+
+    Finite& operator=(const Finite& otherFinite) {
+        num = otherFinite.num;
+    }
+
+    Finite& operator+=(const Finite& otherFinite) {
+        num += otherFinite.num;
+        if (num >= N) {
+            num -= N;
+        }
+        return *this;
+    }
+
+    Finite& operator-=(const Finite& otherFinite) {
+        num -= otherFinite.num;
+        if (num < 0) {
+            num += N;
+        }
+        return *this;
+    }
+
+    Finite& operator*=(const Finite& otherFinite) {
+        num = (num * otherFinite.num) % N;
+        return *this;
+    }
+
+    Finite& operator/=(const Finite& otherFinite) {
+        isItNotCE<checkPrime<N, N - 1>::isPrime> test;
+        *this *= otherFinite.binPow(N - 2); //if otherFinite.num == 0 return 1 / 0;
+    }
+
+    Finite operator+(const Finite& otherFinite) const {
+        Finite resFinite = *this;
+        return resFinite += otherFinite;
+    }
+
+    Finite operator-(const Finite& otherFinite) const {
+        Finite resFinite = *this;
+        return resFinite -= otherFinite;
+    }
+
+    Finite operator*(const Finite& otherFinite) const {
+        Finite resFinite = *this;
+        return resFinite *= otherFinite;
+    }
+
+    Finite operator/(const Finite& otherFinite) const {
+        Finite resFinite = *this;
+        return resFinite /= otherFinite;
+    }
+
+    Finite binPow(const int k) const {
+        int curK = k;
+        Finite resFinite = 1;
+        Finite curFinite = *this;
+
+        while (curK) {
+            if (curK & 1) {
+                resFinite *= curFinite;
+            }
+            curFinite *= curFinite;
+            curK >>= 1;
+        }
+
+        return resFinite;
+    }
+
+private:
+    unsigned num;
 };
 
 template<unsigned N, unsigned M>
@@ -690,11 +787,18 @@ struct isEqual {
 template<unsigned N>
 struct isEqual<N, N> {};
 
+template<typename Field>
+void differenceBetweenTwoVectorsWithMultiK(std::vector<Field>& first, const std::vector<Field>& second, Field k) {
+    for (size_t i = 0; i < first.size(); ++i) {
+        first[i] -= second[i] * k;
+    }
+}
+
 template<unsigned N, unsigned M, typename Field = Rational>
 class Matrix {
 public:
-    Matrix() : mtr(vector<vector<Field> > (N, vector<Field> (M, 0))) {} //0 is defined in every field
-    Matrix(const vector<vector<Field> >& otherMtr) : mtr(otherMtr) {}
+    Matrix() : mtr(std::vector<std::vector<Field> > (N, std::vector<Field> (M, 0))) {} //0 is defined in every field
+    Matrix(const std::vector<std::vector<Field> >& otherMtr) : mtr(otherMtr) {}
 
     Matrix& operator=(const Matrix& otherMatrix) {
         mtr = otherMatrix.mtr;
@@ -703,7 +807,7 @@ public:
     Matrix& operator+=(const Matrix& otherMatrix) {
         for (unsigned i = 0; i < N; ++i) {
             for (unsigned j = 0; j < M; ++j) {
-                mtr[i][j] += otherMatrix.mtr[i][j];
+                mtr[i][j] += otherMatrix[i][j];
             }
         }
         return *this;
@@ -712,7 +816,7 @@ public:
     Matrix& operator-=(const Matrix& otherMatrix) {
         for (unsigned i = 0; i < N; ++i) {
             for (unsigned j = 0; j < M; ++j) {
-                mtr[i][j] -= otherMatrix.mtr[i][j];
+                mtr[i][j] -= otherMatrix[i][j];
             }
         }
         return *this;
@@ -737,7 +841,7 @@ public:
         return resMatrix -= otherMatrix;
     }
 
-    Matrix operator*(const Field& multiplier) {
+    Matrix operator*(const Field& multiplier) const {
         Matrix resMatrix = *this;
         return resMatrix *= multiplier;
     }
@@ -746,13 +850,13 @@ public:
         Matrix<M, N, Field> resMatrix;
         for (unsigned i = 0; i < N; ++i) {
             for (unsigned j = 0; j < M; ++j) {
-                resMatrix[j][i] = *this.mtr[i][j];
+                resMatrix[j][i] = *this[i][j];
             }
         }
         return resMatrix;
     }
 
-    Matrix<N, N, Field>& operator*=(const Matrix<N, N, Field>& otherMatrix) {
+    Matrix<N, N, Field>& operator*=(const Matrix<N, N, Field>& otherMatrix) { //without template it works with only correct expressions
         return *this = *this * otherMatrix;
     }
 
@@ -764,7 +868,7 @@ public:
         for (unsigned i = 0; i < N; ++i) {
             for (unsigned j = 0; j < K; ++j) {
                 for (unsigned z = 0; z < M; ++z) {
-                    resMatrix.mtr[i][j] += *this.mtr[i][z] * otherMatrix.mtr[z][j];
+                    resMatrix[i][j] += mtr[i][z] * otherMatrix[z][j];
                 }
             }
         }
@@ -772,42 +876,13 @@ public:
         return resMatrix;
     }
 
-    Field det() const {
+    Field det() const { // i can merge this method with rank()
         isEqual<N, M> isEqual_;
 
         Matrix curMatrix = *this;
-        unsigned ind = 0;
-        Field res = 1;
+        curMatrix.directGauss();
 
-        for (unsigned j = 0; j < M; ++j) {
-            if (ind == N) {
-                break;
-            }
-
-            for (unsigned i = ind; i < N; ++i) {
-                if (curMatrix[i][j] != 0) {
-                    swap(curMatrix[i], curMatrix[ind]);
-                    res = -res; // *= -1 is defined in every field? /// maybe i can use static int amount of swap rows?
-                    break;
-                }
-            }
-
-            if (curMatrix[ind][j] != 0) {
-                for (unsigned i = ind + 1; i < N; ++i) {
-                    if (curMatrix[i][j] != 0) {
-                        Field multiplier = curMatrix[i][j] / curMatrix[ind][j];
-                        for (unsigned j1 = j; j1 < M; ++j1) {
-                            curMatrix[i][j1] -= curMatrix[ind][j1] * multiplier;
-                        }
-                    }
-                }
-                ++ind;
-            }
-            else {
-                res = 0;
-                break;
-            }
-        }
+        Field res = multiplierOnDirectGauss;
 
         for (unsigned i = 0; i < N; ++i) {
             res *= curMatrix.mtr[i][i];
@@ -820,7 +895,7 @@ public:
 
         Field res = 0;
         for (unsigned i = 0; i < N; ++i) {
-            res += *this.mtr[i][i];
+            res += mtr[i][i];
         }
 
         return res;
@@ -828,56 +903,75 @@ public:
 
     unsigned rank() const { // rank is keyword?
         Matrix curMatrix = *this;
-        unsigned ind = 0;
+        curMatrix.directGauss();
+
         unsigned res = 0;
 
         for (unsigned j = 0; j < M; ++j) {
-            if (ind == N) {
+            if (res == N) {
                 break;
             }
 
-            for (unsigned i = ind; i < N; ++i) {
-                if (curMatrix[i][j] != 0) {
-                    swap(curMatrix[i], curMatrix[ind]);
-                    ++res;
-                    break;
-                }
-            }
-
-            if (curMatrix[ind][j] != 0) {
-                for (unsigned i = ind + 1; i < N; ++i) {
-                    if (curMatrix[i][j] != 0) {
-                        Field multiplier = curMatrix[i][j] / curMatrix[ind][j];
-                        for (unsigned j1 = j; j1 < M; ++j1) {
-                            curMatrix[i][j1] -= curMatrix[ind][j1] * multiplier;
-                        }
-                    }
-                }
-                ++ind;
-            }
-            else {
-                break;
+            if (curMatrix[res][j] != 0) {
+                ++res;
             }
         }
 
         return res;
     }
 
-    vector<Field> getRow(unsigned i) const {
+    std::vector<Field> getRow(unsigned i) const {
         return *this.mtr[i];
     }
 
-    vector<Field> getColumn(unsigned j) const {
-        vector<Field> resColumn(N);
+    std::vector<Field> getColumn(unsigned j) const {
+        std::vector<Field> resColumn(N);
         for (unsigned i = 0; i < N; ++i) {
-            resColumn[i] = *this[i][j];
+            resColumn[i] = mtr[i][j];
         }
         return resColumn;
     }
 
-    /*Matrix directGauss() const { //name of the method in development
+    std::vector<Field>& operator[](int i) {
+        return *this.mtr[i];
+    }
+
+    const std::vector<Field>& operator[](int i) const { // i am not sure, mb const std::vector<....
+        return *this.mtr[i];
+    }
+
+    Matrix& invert() {
+        isEqual<N, M> isEqual_;
+
+        for (unsigned i = 0; i < N; ++i) {
+            mtr[i].resize(2 * N);
+        }
+
+        *this.directGauss();
+        *this.inverseGauss();
+
+        for (unsigned i = 0; i < N; ++i) {
+            for (unsigned j = 0; j < N; ++j) {
+                mtr[i][j] = mtr[i][j + N];
+            }
+            mtr[i].resize(N);
+        }
+
+        return *this;
+    }
+
+    Matrix& inverted() const {
         Matrix resMatrix = *this;
+        return resMatrix.invert();
+    }
+
+private:
+    std::vector<std::vector<Field> > mtr;
+    static Field multiplierOnDirectGauss;
+
+    void directGauss() { //name of the method in development
         unsigned ind = 0;
+        multiplierOnDirectGauss = 1;
 
         for (unsigned j = 0; j < M; ++j) {
             if (ind == N) {
@@ -885,32 +979,40 @@ public:
             }
 
             for (unsigned i = ind; i < N; ++i) {
-                if (resMatrix[i][j] != 0) {
-                    swap(resMatrix[i], resMatrix[ind]);
+                if (mtr[i][j] != 0) {
+                    swap(mtr[i], mtr[ind]);
+                    multiplierOnDirectGauss = -multiplierOnDirectGauss;
                     break;
                 }
             }
 
-            if (resMatrix[ind][j] != 0) {
+            if (mtr[ind][j] != 0) {
                 for (unsigned i = ind + 1; i < N; ++i) {
-                    if (resMatrix[i][j] != 0) {
-                        Field multiplier = resMatrix[i][j] / resMatrix[ind][j];
-                        for (unsigned j1 = j; j1 < M; ++j1) {
-                            resMatrix[i][j1] -= resMatrix[ind][j1] * multiplier;
-                        }
+                    if (mtr[i][j] != 0) {
+                        differenceBetweenTwoVectorsWithMultiK(mtr[i], mtr[ind], mtr[i][j] / mtr[ind][j]);
                     }
                 }
                 ++ind;
             }
         }
+    }
 
-        return resMatrix;
-    }*/ ////////////////////i dont know how use this method in det() and rank()
-
-private:
-    vector<vector<Field> > mtr;
+    void inverseGauss() {
+        for (unsigned revJ = 1; revJ <= M; ++revJ) {
+            unsigned j = M - revJ;
+            for (unsigned revI = 1; revI <= N; ++revI) {
+                unsigned i = N - revI;
+                if (mtr[i][j] != 0) {
+                    for (unsigned i_ = 0; i_ < i; ++i_) {
+                        differenceBetweenTwoVectorsWithMultiK(mtr[i_], mtr[i], mtr[i_][j] / mtr[i][j]);
+                    }
+                    break;
+                }
+            }
+        }
+    }
 };
 
-int main() {
-    return 0;
-}
+template <unsigned N, typename Field = Rational>
+using SquareMatrix = Matrix<N, N, Field>;
+
