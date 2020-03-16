@@ -1,7 +1,3 @@
-#include <iostream>
-
-using namespace std;
-
 //maybe i should use long long instead int, but i dont know the limitations
 
 template<unsigned N, int D>
@@ -19,7 +15,7 @@ struct checkPrime<N, 0> {
     static const bool isPrime = true;
 };
 
-struct ClassCE {
+struct structCE {
     virtual void doCE();
 };
 
@@ -28,7 +24,7 @@ struct isItNotCE {};
 
 template<>
 struct isItNotCE<false> {
-    ClassCE ce_;
+    structCE ce_;
 };
 
 template<unsigned N> //if N <= 0 than should add checkPrime<N, -1>
@@ -107,11 +103,3 @@ private:
     unsigned num;
 };
 
-/*int main() {
-    Finite<8> a = 3;
-    for (int i = 1; i <= 7; ++i) {
-        Finite<8> b = i;
-        Finite<8> c = a / b;
-    }
-    return 0;
-}*/
