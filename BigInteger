@@ -1,406 +1,608 @@
-#pragma once
-
 #include <iostream>
+#include <tuple>
+#include <algorithm>
+#include <functional>
 #include <vector>
-#include <string>
 
-void revCopy_(std::vector<int>::iterator inFirst, std::vector<int>::iterator inLast, std::vector<int>::iterator outFirst) {
-    while (inFirst != inLast) {
-        *outFirst++ = *(--inLast);
-    }
+bool isLess(long long a, long long b) {
+    return a < b;
 }
 
-void copy_(std::vector<int>::iterator inFirst, std::vector<int>::iterator inLast, std::vector<int>::iterator outFirst) {
-    while (inFirst != inLast) {
-        *outFirst++ = *inFirst++;
-    }
+bool isGreater(long long a, long long b) {
+    return a > b;
 }
 
-class BigInteger {
+class SplayTree {
+private:
+    struct Node;
 public:
+    long long getSumOfSubsegment(int l, int r);
+    void assignOnSubsegment(int l, int r, long long assignX);
+    void plusOnSubsegment(int l, int r, long long plusX);
+    void nextPermutationOnSubsegment(int l, int r);
+    void prevPermutationOnSubsegment(int l, int r);
 
-    BigInteger(int newBigInt = 0);
-    BigInteger(size_t sizeT);
-    BigInteger(const BigInteger& bigInt);
-    BigInteger(std::string strBigInt);
+    template<typename... Args>
+    void doFunctionOnSubsegment(int l, int r, SplayTree::Node* (SplayTree::Node::* func)(Args... args), Args... args);
 
-    BigInteger& operator=(const BigInteger& bigInt);
+    void buildOfVector(const std::vector<long long>& vectorOfX);
+    std::vector<long long> getVectorOfX();
 
-    BigInteger operator-() const;
+    void addNode(int pos, long long newX);
 
-    BigInteger& operator+=(const BigInteger& bigInt);
-    BigInteger& operator-=(const BigInteger& bigInt);
-
-    BigInteger& operator++();
-    BigInteger& operator--();
-    BigInteger operator++(int);
-    BigInteger operator--(int);
-
-    BigInteger& operator *=(const BigInteger& bigInt);
-    BigInteger& operator/=(const BigInteger& bigInt);
-    BigInteger& operator%=(const BigInteger& bigInt);
-
-    bool isAbsoluteGreater(const BigInteger& bigInt) const;
-    bool isAbsoluteLess(const BigInteger& bigInt) const;
-
-    explicit operator bool() const;
-
-    std::string toString() const;
-
-    friend std::ostream& operator<<(std::ostream& stream, const BigInteger& bigInt);
-    friend std::istream& operator>>(std::istream& stream, BigInteger& bigInt);
-
-    bool operator>(const BigInteger& bigInt) const;
-    bool operator<(const BigInteger& bigInt) const;
-    bool operator==(const BigInteger& bigInt) const;
-    bool operator!=(const BigInteger& bigInt) const;
-    bool operator>=(const BigInteger& bigInt) const;
-    bool operator<=(const BigInteger& bigInt) const;
+    void deleteX(int deletePos);
 
 private:
-    std::vector<int> digits_;
-    int sign_;
-    static const int MAXDIGIT_ = 1000000000;
-    static const size_t MAXLENDIGIT_ = 9;
+    struct Node {
+    //methods    
+        void _push();
+        void _pushAssignInParent();
+        void _pushAddInParent();
+        void _pushRevInParent();
 
-    size_t getMax_(const BigInteger& bigInt) const;
+        void _normalization();
+        void _normalizationInParent();
+        std::tuple<bool, bool, long long, long long> returnTupleOfSomeValues();
 
-    bool isZero_() const;
+        void _zig(Node* Node::* vertexOnZigDirection, Node* Node::* vertexOnOppositeDirection);
+        void _leftZigZig();
+        void _rightZigZig();
+        void _leftZigZag();
+        void _rightZigZag();
+        Node* _splay();
 
-    void sumTwoAbsolutes_(const BigInteger& bigInt);
-    BigInteger differenceTwoAbsolutes_(const BigInteger& bigInt) const;
+        Node* _find(long long need);
+        Node* _merge(Node* otherNode);
+        std::pair<Node*, Node*> _split();
 
-    void upd_(size_t index, int delta);
+        Node* _initAssign(long long assignX);
+        Node* _initPlus(long long plusX);
 
-    void correctBigInt_();
+        void _dfs(std::vector<long long>& vectorOfX);
 
-    int binSearch_(const BigInteger& posBigInt) const;
+        void _correctChilds();
+
+        Node* _permute(bool Node::* typeOfMonotony, bool (* compare)(long long, long long), long long lastX, long long Node::* extremeValue1, long long Node::* extremeValue2);
+        Node* _nextPermutation();
+        Node* _prevPermutation();
+    //fields
+        static const long long _maxValue = (long long)1e15;
+
+        Node* _par = nullptr;
+        Node* _left = nullptr;
+        Node* _right = nullptr;
+
+        long long _sumX = 0;
+        long long _sumV = 0;
+        long long _add = 0;
+        long long _assign = _maxValue;
+        long long _x;
+        bool _rev = false;
+
+        long long _maxX = -_maxValue;
+        long long _minX = _maxValue;
+        bool _isIner = true;
+        bool _isDecr = true;
+    };
+
+    Node* _root = nullptr;
 };
 
-BigInteger:: BigInteger(int integer)
-    : sign_(integer >= 0 ? 1 : -1)
-{
+long long SplayTree::getSumOfSubsegment(int l, int r) {
+    if (l == 0 && r == _root -> _sumV - 1) {
+        return _root -> _sumX;
+    }
 
-    integer = abs(integer);
-    digits_.push_back(integer % MAXDIGIT_);
-    if (integer >= MAXDIGIT_) {
-        digits_.push_back(integer / MAXDIGIT_);
+    Node* rightTree;
+    Node* midTree;
+    Node* leftTree;
+
+    if (l == 0) {
+        std::tie(leftTree, rightTree) = (_root -> _find(r + 1)) -> _split();
+        long long resSum = leftTree -> _sumX;
+        _root = leftTree -> _merge(rightTree);
+        return resSum;
+    }
+
+    if (r == _root -> _sumV - 1) {
+        std::tie(leftTree, rightTree) = (_root -> _find(l)) -> _split();
+        long long resSum = rightTree -> _sumX;
+        _root = leftTree -> _merge(rightTree);
+        return resSum;
+    }
+
+    std::tie(_root, rightTree) = (_root -> _find(r + 1)) -> _split();
+    std::tie(leftTree, midTree) = (_root -> _find(l)) -> _split();
+
+    long long resSum = midTree -> _sumX;
+
+    _root = leftTree -> _merge(midTree);
+    _root = _root -> _merge(rightTree);
+
+    return resSum;
+}
+
+void SplayTree::assignOnSubsegment(int l, int r, long long assignX) {
+    doFunctionOnSubsegment<long long>(l, r, &Node::_initAssign, assignX);
+}
+
+void SplayTree::plusOnSubsegment(int l, int r, long long plusX) {
+    doFunctionOnSubsegment<long long>(l, r, &Node::_initPlus, plusX);
+}
+
+void SplayTree::nextPermutationOnSubsegment(int l, int r) {
+    doFunctionOnSubsegment<>(l, r, &Node::_nextPermutation);
+}
+
+void SplayTree::prevPermutationOnSubsegment(int l, int r) {
+    doFunctionOnSubsegment<>(l, r, &Node::_prevPermutation);
+}
+
+template<typename... Args>
+void SplayTree::doFunctionOnSubsegment(int l, int r, SplayTree::Node* (SplayTree::Node::* func)(Args... args), Args... args) {
+    Node* leftTree;
+    Node* midTree;
+    Node* rightTree;
+
+    if (l == 0 && r == _root -> _sumV - 1) {
+        _root = (_root->*func)(args...);
+        return;
+    }
+
+    if (l == 0) {
+        std::tie(leftTree, rightTree) = (_root -> _find(r + 1)) -> _split();
+        leftTree = (leftTree->*func)(args...);
+        _root = leftTree -> _merge(rightTree);
+        return;
+    }
+
+    if (r == _root -> _sumV - 1) {
+        std::tie(leftTree, rightTree) = (_root -> _find(l)) -> _split();
+        rightTree = (rightTree->*func)(args...);
+        _root = leftTree -> _merge(rightTree);
+        return;
+    }
+
+    std::tie(_root, rightTree) = (_root -> _find(r + 1)) -> _split();
+    std::tie(leftTree, midTree) = (_root -> _find(l)) -> _split();
+
+    midTree = (midTree->*func)(args...);
+
+    _root = leftTree -> _merge(midTree);
+    _root = _root -> _merge(rightTree);
+}
+
+void SplayTree::buildOfVector(const std::vector<long long>& vectorOfX) {
+    for (size_t i = 0; i < vectorOfX.size(); ++i) {
+        addNode(static_cast<int>(i), vectorOfX[i]);
     }
 }
 
-BigInteger:: BigInteger(size_t sizeT) {
-    *this = BigInteger(static_cast<int>(sizeT));
+std::vector<long long> SplayTree::getVectorOfX() {
+    std::vector<long long> resVector;
+    if (_root != nullptr) {
+        _root -> _dfs(resVector);
+    }
+    return resVector;
 }
 
-BigInteger:: BigInteger(const BigInteger& bigInt) : digits_(bigInt.digits_), sign_(bigInt.sign_) {}
-
-BigInteger:: BigInteger(std::string strBigInt) {
-    sign_ = strBigInt[0] == '-' ? -1 : 1;
-    digits_.clear();
-
-    while (strBigInt.length() && strBigInt.back() != '-') {
-        std::string nowStr = "";
-        while (nowStr.length() < MAXLENDIGIT_ && strBigInt.length() && strBigInt.back() != '-') {
-            nowStr = strBigInt.back() + nowStr;
-            strBigInt.pop_back();
-        }
-
-        int newEl = 0;
-        for (size_t i = 0; i < nowStr.length(); ++i) {
-            newEl = 10 * newEl + (nowStr[i] - '0');
-        }
-        digits_.push_back(newEl);
+void SplayTree::addNode(int pos, long long newX) {
+    if (_root == nullptr) {
+        _root = new Node;
+        _root -> _x = newX;
+        _root -> _normalization();
+        return;
     }
+
+    if (pos == 0) {
+        Node* old_root = _root;
+        _root = new Node;
+        _root -> _x = newX;
+        _root -> _right = old_root;
+        old_root -> _par = _root;
+        _root -> _normalization();
+        return;
+    }
+
+    if (pos == _root -> _sumV) {
+        Node* old_root = _root;
+        _root = new Node;
+        _root -> _x = newX;
+        _root -> _left = old_root;
+        old_root -> _par = _root;
+        _root -> _normalization();
+        return;
+    }
+
+    Node* leftTree;
+    Node* rightTree;
+    std::tie(leftTree, rightTree) = (_root -> _find(pos)) -> _split();
+
+    _root = new Node;
+    _root -> _x = newX;
+    _root -> _left = leftTree;
+    leftTree -> _par = _root;
+    _root -> _right = rightTree;
+    rightTree -> _par = _root;
+
+    _root -> _normalization();
 }
 
-BigInteger& BigInteger:: operator=(const BigInteger& bigInt) {
-    if (this == &bigInt) {
-        return *this;
+void SplayTree::deleteX(int deletePos) {
+    _root = (_root -> _find(deletePos + 1)) -> _splay();
+
+    Node* left = _root -> _left;
+    Node* right = _root -> _right;
+
+    if (right != nullptr) {
+        right -> _par = nullptr;
+    }
+    if (left != nullptr) {
+        left -> _par = nullptr;
     }
 
-    sign_ = bigInt.sign_;
-    digits_ = bigInt.digits_;
-    return *this;
-}
-
-BigInteger BigInteger:: operator-() const {
-    BigInteger resBigInt = *this;
-    if (!isZero_()) {
-        resBigInt.sign_ *= -1;
-    }
-    return resBigInt;
-}
-
-BigInteger& BigInteger:: operator+=(const BigInteger& bigInt) {
-    if (sign_ == bigInt.sign_) {
-        sumTwoAbsolutes_(bigInt);
-    }
-    else if (isAbsoluteLess(bigInt)) {
-        *this = bigInt.differenceTwoAbsolutes_(*this);
+    delete _root;
+    if (left == nullptr) {
+        _root = right;
     }
     else {
-        *this = differenceTwoAbsolutes_(bigInt);
+        _root = left -> _merge(right);
     }
-    return *this;
 }
-
-BigInteger operator+(const BigInteger& first, const BigInteger& second) {
-    BigInteger resBigInt = first;
-    return resBigInt += second;
-}
-
-BigInteger& BigInteger:: operator-=(const BigInteger& bigInt) {
-    return *this += (-bigInt);
-}
-
-BigInteger operator-(const BigInteger& first, const BigInteger& second) {
-    BigInteger resBigInt = first;
-    return resBigInt -= second;
-}
-
-BigInteger& BigInteger:: operator++() {
-    return *this += 1;
-}
-
-BigInteger& BigInteger:: operator--() {
-    return *this -= 1;
-}
-
-BigInteger BigInteger:: operator++(int) {
-    BigInteger resBigInt = *this;
-    *this += 1;
-    return resBigInt;
-}
-
-BigInteger BigInteger:: operator--(int) {
-    BigInteger resBigInt = *this;
-    *this -= 1;
-    return resBigInt;
-}
-
-BigInteger& BigInteger:: operator *=(const BigInteger& bigInt) {
-    BigInteger resBigInt;
-    resBigInt.digits_.assign(digits_.size() + bigInt.digits_.size(), 0);
-    resBigInt.sign_ = sign_ * bigInt.sign_;
-
-    for (size_t i = 0; i < digits_.size(); ++i) {
-        for (size_t j = 0; j < bigInt.digits_.size(); ++j) {
-            long long multi = static_cast<long long>(digits_[i]) * static_cast<long long>(bigInt.digits_[j]);
-            resBigInt.upd_(i + j, multi % MAXDIGIT_);
-            resBigInt.upd_(i + j + 1, multi / MAXDIGIT_);
+  
+void SplayTree::Node::_push() {
+    if (_assign != _maxValue) { 
+        if (_left != nullptr) {
+            _left -> _pushAssignInParent();
         }
-    }
-
-    resBigInt.correctBigInt_();
-    return *this = resBigInt;
-}
-
-BigInteger operator*(const BigInteger& first, const BigInteger& second) {
-    BigInteger resBigInt = first;
-    return resBigInt *= second;
-}
-
-bool BigInteger:: isAbsoluteGreater(const BigInteger& bigInt) const {
-    if (digits_.size() != bigInt.digits_.size()) {
-        return digits_.size() > bigInt.digits_.size();
-    }
-    for (size_t i = 0; i < digits_.size(); ++i) {
-        size_t indexDigit = digits_.size() - i - 1;
-        if (digits_[indexDigit] != bigInt.digits_[indexDigit]) {
-            return digits_[indexDigit] > bigInt.digits_[indexDigit];
+        if (_right != nullptr) {
+            _right -> _pushAssignInParent();
         }
+        _assign = _maxValue;
     }
 
-    return false;
-}
-
-bool BigInteger:: isAbsoluteLess(const BigInteger& bigInt) const {
-    return bigInt.isAbsoluteGreater(*this);
-}
-
-BigInteger:: operator bool() const {
-    return !isZero_();
-}
-
-std::string BigInteger:: toString() const {
-    std::string resString = "";
-    if (sign_ == -1) {
-        resString += "-";
-    }
-
-    for (size_t i = 0; i < digits_.size(); ++i) {
-        std::string newStr = std::to_string(digits_[digits_.size() - i - 1]);
-        if (i) {
-            while (newStr.size() != MAXLENDIGIT_) {
-                newStr = "0" + newStr;
-            }
+    if (_add  != 0) {
+        if (_left != nullptr) {
+            _left -> _pushAddInParent();
         }
-        resString += newStr;
-    }
-    return resString;
-}
-
-std::ostream& operator<<(std::ostream& stream, const BigInteger& bigInt) {
-    stream << bigInt.toString();
-    return stream;
-}
-
-std::istream& operator>>(std::istream& stream, BigInteger& bigInt) {
-    std::string str;
-    stream >> str;
-    bigInt = str;
-    return stream;
-}
-
-size_t BigInteger:: getMax_(const BigInteger& bigInt) const {
-    return digits_.size() > bigInt.digits_.size() ? digits_.size() : bigInt.digits_.size();
-}
-
-bool BigInteger:: isZero_() const {
-    return digits_.back() == 0;
-}
-
-void BigInteger:: sumTwoAbsolutes_(const BigInteger& bigInt) {
-    digits_.resize(getMax_(bigInt), 0);
-    int delta = 0;
-
-    for (size_t i = 0; i < getMax_(bigInt); i++) {
-        digits_[i] += delta;
-        if (i < bigInt.digits_.size()) {
-            digits_[i] += bigInt.digits_[i];
+        if (_right != nullptr) {
+            _right -> _pushAddInParent();
         }
+        _add = 0;
+    }
 
-        delta = 0;
-
-        if (digits_[i] >= MAXDIGIT_) {
-            delta = 1;
-            digits_[i] -= MAXDIGIT_;
+    if (_rev) {
+        std::swap(_left, _right); // does it work?
+        if (_left != nullptr) {
+            _left -> _pushRevInParent();
         }
-    }
-
-    if (delta != 0) {
-            digits_.push_back(delta);
-    }
-}
-
-BigInteger BigInteger:: differenceTwoAbsolutes_(const BigInteger& bigInt) const {
-    BigInteger resBigInt = *this;
-    int delta = 0;
-
-    for (size_t i = 0; i < digits_.size(); i++) {
-        resBigInt.digits_[i] += delta;
-        if (i < bigInt.digits_.size()) {
-            resBigInt.digits_[i] -= bigInt.digits_[i];
+        if (_right != nullptr) {
+            _right -> _pushRevInParent();
         }
-
-        delta = 0;
-        if (resBigInt.digits_[i] < 0) {
-            delta = -1;
-            resBigInt.digits_[i] += MAXDIGIT_;
-        }
-    }
-
-    resBigInt.correctBigInt_();
-    return resBigInt;
-}
-
-void BigInteger:: upd_(size_t index, int delta) {
-    digits_[index] += delta;
-    if (digits_[index] >= MAXDIGIT_) {
-        digits_[index] -= MAXDIGIT_;
-        digits_[index + 1] += 1;
+        _rev = false;
     }
 }
 
-void BigInteger:: correctBigInt_() {
-    while (digits_.size() > 1 && !digits_.back()) {
-        digits_.pop_back();
-    }
-    if (isZero_()) {
-        sign_ = 1;
-    }
+void SplayTree::Node::_pushAssignInParent() {
+    _sumX = _sumV * (_par -> _assign);
+    _add = 0;
+    _assign = _par -> _assign;
+    _x = _par -> _assign;
+    _minX = _par -> _assign;
+    _maxX = _par -> _assign;
+    _isIner = true;
+    _isDecr = true;
 }
 
-int BigInteger:: binSearch_(const BigInteger& posBigInt) const {
-    int left = 0, right = MAXDIGIT_;
-    while (right - left > 1) {
-        int mid = (left + right) / 2;
-        if (!isAbsoluteLess(posBigInt * mid)) {
-            left = mid;
+void SplayTree::Node::_pushAddInParent() {
+    _sumX += _sumV * (_par -> _add);
+    if (_assign != _maxValue) {
+        _assign += _par -> _add;
+    }
+    else {
+        _add += _par -> _add;
+    }
+    _x += _par -> _add;
+    _minX += _par -> _add;
+    _maxX += _par -> _add;
+}
+
+void SplayTree::Node::_pushRevInParent() {
+    _rev ^= 1;
+    std::swap(_isIner, _isDecr);
+}
+
+void SplayTree::Node::_normalization() {
+    _sumX = _x;
+    _sumV = 1;
+    _maxX = _x;
+    _minX = _x;
+
+    bool isLeftIner = true, isLeftDecr = true, isRightIner = true, isRightDecr = true;
+    long long leftMinX = _maxValue, leftMaxX = -_maxValue, rightMinX = _maxValue, rightMaxX = -_maxValue;
+
+    if (_left != nullptr) {
+        _left -> _normalizationInParent();
+        std::tie(isLeftIner, isLeftDecr, leftMinX, leftMaxX) = _left -> returnTupleOfSomeValues();
+    }
+    if (_right != nullptr) {
+        _right -> _normalizationInParent();
+        std::tie(isRightIner, isRightDecr, rightMinX, rightMaxX) = _right -> returnTupleOfSomeValues();
+    }
+
+    _isIner = (isLeftIner && isRightIner && leftMaxX <= _x && _x <= rightMinX);
+    _isDecr = (isLeftDecr && isRightDecr && leftMinX >= _x && _x >= rightMaxX);
+}
+
+void SplayTree::Node::_normalizationInParent() {
+    _par -> _sumX += _sumX;
+    _par -> _sumV += _sumV;
+    _par -> _minX = std::min(_par -> _minX, _minX);
+    _par -> _maxX = std::max(_par -> _maxX, _maxX);
+}
+
+std::tuple<bool, bool, long long, long long> SplayTree::Node::returnTupleOfSomeValues() {
+    return std::make_tuple(_isIner, _isDecr, _minX, _maxX);
+}
+
+void SplayTree::Node::_zig(Node* Node::* vertexOnZigDirection, Node* Node::* vertexOnOppositeDirection) {
+    Node* par = _par;
+    _par -> _push();
+    _push();
+
+    par ->*vertexOnZigDirection = this->*vertexOnOppositeDirection;
+    this->*vertexOnOppositeDirection = par;
+    _par = par -> _par;
+    par -> _par = this;
+
+    if (par ->*vertexOnZigDirection != nullptr) {
+        (par->*vertexOnZigDirection) -> _par = par;
+    }
+    if (_par != nullptr) {
+        if (_par ->*vertexOnZigDirection == par) {
+            _par ->*vertexOnZigDirection = this;
         }
         else {
-            right = mid;
+            _par->*vertexOnOppositeDirection = this;
         }
     }
-    return left;
+
+    par -> _normalization();
+    _normalization();
+
+
 }
 
-BigInteger& BigInteger:: operator/=(const BigInteger& bigInt) {
-    if (digits_.size() < bigInt.digits_.size()) {
-        return *this = 0;
+void SplayTree::Node::_leftZigZig() {
+    Node* par = _par;
+    par -> _zig(&Node::_left, &Node::_right);
+    _zig(&Node::_left, &Node::_right);
+}
+
+void SplayTree::Node::_rightZigZig() {
+    Node* par = _par;
+    par -> _zig(&Node::_right, &Node::_left);
+    _zig(&Node::_right, &Node::_left);
+}
+
+void SplayTree::Node::_leftZigZag() {
+    _zig(&Node::_right, &Node::_left);            
+    _zig(&Node::_left, &Node::_right);
+}
+
+void SplayTree::Node::_rightZigZag() {
+    _zig(&Node::_left, &Node::_right);
+    _zig(&Node::_right, &Node::_left);
+}
+
+SplayTree::Node* SplayTree::Node::_splay() {
+    while (_par != nullptr) {
+        if (_par -> _par == nullptr) {
+            if (_par -> _left == this) {
+                _zig(&Node::_left, &Node::_right);
+            }
+            else {
+                _zig(&Node::_right, &Node::_left);   
+            }
+        }
+        else {
+            Node* granny = _par -> _par;
+            if (granny -> _left == _par) {
+                if (_par -> _left == this) {
+                    _leftZigZig();
+                }
+                else {
+                    _leftZigZag();
+                }
+            }
+            else {
+                if (_par -> _right == this) {
+                    _rightZigZig();
+                }
+                else {
+                    _rightZigZag();
+                }
+            }
+        }
+    }
+    return this;
+}
+
+SplayTree::Node* SplayTree::Node::_find(long long need) {
+    _push();
+
+    if (_left != nullptr && _left -> _sumV >= need) {
+        return _left -> _find(need);
+    }
+    else if (_left != nullptr && need == _left -> _sumV + 1 || _left == nullptr && need == 1) {
+        return this;
+    }
+    else {
+        long long sumInLeft = (_left == nullptr) ? 0 : _left -> _sumV;
+        return _right -> _find(need - 1 - sumInLeft);
+    }
+}
+
+SplayTree::Node* SplayTree::Node::_merge(Node* otherNode) {
+    if (otherNode == nullptr) {
+        return this;
     }
 
-    BigInteger curBigInt;
-    curBigInt.digits_.assign(bigInt.digits_.size(), 0);
-    copy_(digits_.end() - curBigInt.digits_.size(), digits_.end(), curBigInt.digits_.begin());
+    Node* nodeMax1 = _find(_sumV);
+    nodeMax1 -> _splay();
 
-    BigInteger posBigInt = bigInt;
-    posBigInt.sign_ *= posBigInt.sign_;
-    std::vector<int> revResDigits_;
-    revResDigits_.push_back(curBigInt.binSearch_(posBigInt));
+    nodeMax1 -> _right = otherNode;
+    otherNode -> _par = nodeMax1;
+    nodeMax1 -> _normalization();
+    return nodeMax1;
+}
 
-    for (size_t i = bigInt.digits_.size(); i < digits_.size(); ++i) {
-        curBigInt = MAXDIGIT_ * (curBigInt - posBigInt * revResDigits_.back()) + digits_[digits_.size() - i - 1];
-        revResDigits_.push_back(curBigInt.binSearch_(posBigInt));
+std::pair<SplayTree::Node*, SplayTree::Node*> SplayTree::Node::_split() { // 'this' is nodeSplit
+    _splay();
+
+    Node* node2 = _right;
+    if (node2 == nullptr) {
+        return {this, nullptr};
     }
 
-    BigInteger resBigInt;
-    resBigInt.digits_.assign(revResDigits_.size(), 0);
-    revCopy_(revResDigits_.begin(), revResDigits_.end(), resBigInt.digits_.begin());
-    resBigInt.sign_ = sign_ * bigInt.sign_;
+    _right = nullptr;
+    node2 -> _par = nullptr;
+    _normalization();
 
-    resBigInt.correctBigInt_();
-
-    return *this = resBigInt;
+    return {this, node2};
 }
 
-BigInteger operator/(const BigInteger& first, const BigInteger& second) {
-    BigInteger resBigInt = first;
-    return resBigInt /= second;
+SplayTree::Node* SplayTree::Node::_initAssign(long long assignX) {
+    _sumX = _sumV * assignX;
+    _add = 0;
+    _assign = assignX;
+    _x = assignX;
+    _minX = assignX;
+    _maxX = assignX;
+    _isIner = true;
+    _isDecr = true;
+    return this;
 }
 
-BigInteger& BigInteger:: operator%=(const BigInteger& bigInt) {
-    return *this = *this - (*this / bigInt) * bigInt;
-}
-
-BigInteger operator%(const BigInteger& first, const BigInteger& second) {
-    BigInteger resBigInt = first;
-    return resBigInt %= second;
-}
-
-bool BigInteger:: operator>(const BigInteger& bigInt) const {
-    if (sign_ != bigInt.sign_) {
-        return sign_ > bigInt.sign_;
+SplayTree::Node* SplayTree::Node::_initPlus(long long plusX) {
+    _sumX += _sumV * plusX;
+    if (_assign != _maxValue) {
+        _assign += plusX;
     }
-    return sign_ == 1 ? isAbsoluteGreater(bigInt) : isAbsoluteLess(bigInt);
+    else {
+        _add += plusX;
+    }
+    _x += plusX;
+    _minX += plusX;
+    _maxX += plusX;
+    return this;
 }
 
-bool BigInteger:: operator<(const BigInteger& bigInt) const {
-    return bigInt > *this;
+void SplayTree::Node::_dfs(std::vector<long long>& vectorOfX) {
+    _push();
+    if (_left != nullptr) {
+        _left -> _dfs(vectorOfX);
+    }
+    vectorOfX.push_back(_x);
+    if (_right != nullptr) {
+        _right -> _dfs(vectorOfX);
+    }
 }
 
-bool BigInteger:: operator==(const BigInteger& bigInt) const {
-    return sign_ == bigInt.sign_ && digits_ == bigInt.digits_;
+void SplayTree::Node::_correctChilds() {
+    if (_left != nullptr) {
+        _left -> _par = this;
+    }
+    if (_right != nullptr) {
+        _right -> _par = this;
+    }
 }
 
-bool BigInteger:: operator!=(const BigInteger& bigInt) const {
-    return !(*this == bigInt);
+SplayTree::Node* SplayTree::Node::_permute(bool Node::* typeOfMonotony, bool (* compare)(long long, long long), long long lastX, long long Node::* extremeValue1, long long Node::* extremeValue2) {
+    if (this->*typeOfMonotony) {
+        _rev ^= 1;
+        _push();
+        _normalization();
+        return this;
+    }
+
+    Node* curNode = this;
+    while (true) {
+        curNode -> _push();
+        Node* right = curNode -> _right;
+        if (right != nullptr && (!(right->*typeOfMonotony) || (right->*typeOfMonotony) && compare(right->*extremeValue2, lastX))) {
+            curNode = right;
+        }
+        else if (right != nullptr && right->*typeOfMonotony && compare(curNode -> _x, right->*extremeValue1) ||
+                 right == nullptr && curNode -> _par != nullptr && curNode -> _par -> _left == curNode && compare(curNode -> _x, curNode -> _par -> _x) ||
+                 right == nullptr && curNode -> _par != nullptr && curNode -> _par -> _right == curNode && compare(curNode -> _x, lastX)) {
+            break;
+        }
+        else {
+            lastX = curNode -> _x;
+            curNode = curNode -> _left;
+        }
+    }
+    
+    curNode -> _splay();
+
+    Node* leftTree = curNode -> _left;
+    if (leftTree != nullptr) {
+        leftTree -> _par = nullptr;
+    }
+    curNode -> _left = nullptr;
+    
+    Node* inflectionNode = curNode;
+    curNode = inflectionNode -> _right;
+    curNode -> _par = nullptr;
+    inflectionNode -> _right = nullptr;
+    
+    while (true) {
+        curNode -> _push();
+        Node* right = curNode -> _right;
+        if (right != nullptr && compare(inflectionNode -> _x, right->*extremeValue1)) {
+            curNode = right;
+        }
+        else if (compare(inflectionNode -> _x, curNode -> _x)) {
+            break;
+        }
+        else {
+            curNode = curNode -> _left;
+        }
+    }
+    
+    curNode -> _splay();
+
+    std::swap(curNode -> _left, inflectionNode -> _left);
+    std::swap(curNode -> _right, inflectionNode -> _right);
+    curNode -> _correctChilds();
+    inflectionNode -> _correctChilds();
+
+    curNode -> _normalization();
+    inflectionNode -> _rev ^= 1;
+    inflectionNode -> _push();
+    inflectionNode -> _normalization();
+
+    if (leftTree != nullptr) {
+        leftTree = leftTree -> _merge(curNode);
+    }
+    else {
+        leftTree = curNode;
+    }
+    
+    if (leftTree != nullptr) {
+        leftTree = leftTree -> _merge(inflectionNode);
+    }
+    else {
+        leftTree = inflectionNode;
+    }
+    return leftTree;
 }
 
-bool BigInteger:: operator>=(const BigInteger& bigInt) const {
-    return *this > bigInt || *this == bigInt;
+SplayTree::Node* SplayTree::Node::_nextPermutation() {
+    return _permute(&Node::_isDecr, isLess, -_maxValue, &Node::_maxX, &Node::_minX);
 }
 
-bool BigInteger:: operator<=(const BigInteger& bigInt) const {
-    return bigInt >= *this;
+SplayTree::Node* SplayTree::Node::_prevPermutation() {
+    return _permute(&Node::_isIner, isGreater, _maxValue, &Node::_minX, &Node::_maxX);
 }
