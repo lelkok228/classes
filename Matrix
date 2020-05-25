@@ -972,7 +972,7 @@ public:
         c22 = p1 - p2 + p3 + p6;
 
         Matrix<N, N, Field> resMatrix;
-        resMatrix = resMatrix._assembleMatrixOfFourSubmatrices(c11, c12, c21, c22);
+        resMatrix._assembleMatrixOfFourSubmatrices(c11, c12, c21, c22);
         
         return resMatrix;
     }
@@ -982,7 +982,7 @@ public:
         isEqual<M, M_>* isEqual_ = new isEqual<M, M_>;
         delete isEqual_;
 
-        const unsigned newN = 1 << static_cast<unsigned>(ceil(log(std::max(N, std::max(M, K)))));
+        const unsigned newN = 1 << static_cast<unsigned>(ceil(log2(std::max(N, std::max(M, K)))));
 
         Matrix<newN, newN, Field> left = getVectorNecessarySize(newN, newN);
         Matrix<newN, newN, Field> right = otherMatrix.getVectorNecessarySize(newN, newN);
@@ -1120,7 +1120,7 @@ private:
     std::vector<std::vector<Field> > _mtr;
     isFieldCorrect<Field> _isFieldCorrect;
 
-    Matrix<N, N, Field> _assembleMatrixOfFourSubmatrices(Matrix<N / 2, N / 2, Field>& c11,
+    void _assembleMatrixOfFourSubmatrices(Matrix<N / 2, N / 2, Field>& c11,
                                                          Matrix<N / 2, N / 2, Field>& c12,
                                                          Matrix<N / 2, N / 2, Field>& c21,
                                                          Matrix<N / 2, N / 2, Field>& c22) {
