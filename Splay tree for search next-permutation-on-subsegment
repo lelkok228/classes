@@ -1,6 +1,8 @@
 #include <iostream>
 #include <tuple>
 #include <algorithm>
+#include <functional>
+#include <vector>
 
 bool isLess(long long a, long long b) {
     return a < b;
@@ -11,637 +13,620 @@ bool isGreater(long long a, long long b) {
 }
 
 class SplayTree {
+private:
+    struct Node;
 public:
-    long long getSumOfSubsegment(int l, int r) {
-        if (l == 0 && r == root -> _sumV - 1) {
-            return root -> _sumX;
-        }
+    ~SplayTree();
 
-        Node* rightTree;
-        Node* midTree;
-        Node* leftTree;
+    long long getSumOnSubsegment(int l, int r);
+    void assignOnSubsegment(int l, int r, long long& assignX);
+    void plusOnSubsegment(int l, int r, long long& plusX);
+    void nextPermutationOnSubsegment(int l, int r);
+    void prevPermutationOnSubsegment(int l, int r);
 
-        if (l == 0) {
-            std::tie(leftTree, rightTree) = (root -> _find(r + 1)) -> split();
-            long long resSum = leftTree -> _sumX;
-            root = leftTree -> _merge(rightTree);
-            return resSum;
-        }
+    template<typename... Args>
+    void doFunctionOnSubsegment(int l, int r, SplayTree::Node* (SplayTree::Node::* func)(Args&... args), Args&... args);
 
-        if (r == root -> _sumV - 1) {
-            std::tie(leftTree, rightTree) = (root -> _find(l)) -> split();
-            long long resSum = rightTree -> _sumX;
-            root = leftTree -> _merge(rightTree);
-            return resSum;
-        }
+    void buildOfVector(const std::vector<long long>& vectorOfX);
+    std::vector<long long> getVectorOfX();
 
-        std::tie(root, rightTree) = (root -> _find(r + 1)) -> split();
-        std::tie(leftTree, midTree) = (root -> _find(l)) -> split();
+    void addNode(int pos, long long newX);
 
-        long long resSum = midTree -> _sumX;
-
-        root = leftTree -> _merge(midTree);
-        root = root -> _merge(rightTree);
-
-        return resSum;
-    }
-
-    void assignOnSubsegment(int l, int r, int assignX) {
-        Node* rightTree;
-        Node* midTree;
-        Node* leftTree;
-
-        if (l == 0 && r == root -> _sumV - 1) {
-            root -> initAssign(assignX);
-            return;
-        }
-
-        if (l == 0) {
-            std::tie(leftTree, rightTree) = (root -> _find(r + 1)) -> split();
-            leftTree -> initAssign(assignX);
-            root = leftTree -> _merge(rightTree);
-            return;
-        }
-
-        if (r == root -> _sumV - 1) {
-            std::tie(leftTree, rightTree) = (root -> _find(l)) -> split();
-            rightTree -> initAssign(assignX);
-            root = leftTree -> _merge(rightTree);
-            return;
-        }
-
-        std::tie(root, rightTree) = (root -> _find(r + 1)) -> split();
-        std::tie(leftTree, midTree) = (root -> _find(l)) -> split();
-
-        midTree -> initAssign(assignX);
-
-        root = leftTree -> _merge(midTree);
-        root = root -> _merge(rightTree);
-    }
-
-    void plusOnSubsegment(int l, int r, int plusX) {
-        Node* leftTree;
-        Node* midTree;
-        Node* rightTree;
-
-        if (l == 0 && r == root -> _sumV - 1) {
-            root -> initPlus(plusX);
-            return;
-        }
-
-        if (l == 0) {
-            std::tie(leftTree, rightTree) = (root -> _find(r + 1)) -> split();
-            leftTree -> initPlus(plusX);
-            root = leftTree -> _merge(rightTree);
-            return;
-        }
-
-        if (r == root -> _sumV - 1) {
-            std::tie(leftTree, rightTree) = (root -> _find(l)) -> split();
-            rightTree -> initPlus(plusX);
-            root = leftTree -> _merge(rightTree);
-            return;
-        }
-
-        std::tie(root, rightTree) = (root -> _find(r + 1)) -> split();
-        std::tie(leftTree, midTree) = (root -> _find(l)) -> split();
-
-        midTree -> initPlus(plusX);
-
-        root = leftTree -> _merge(midTree);
-        root = root -> _merge(rightTree);
-    }
-
-    void nextPermutationOnSubsegment(int l, int r) {
-        Node* leftTree;
-        Node* midTree;
-        Node* rightTree;
-
-        if (l == 0 && r == root -> _sumV - 1) {
-            root = root -> nextPermutation();
-            return;
-        }
-
-        if (l == 0) {
-            std::tie(leftTree, rightTree) = (root -> _find(r + 1)) -> split();
-            leftTree = leftTree -> nextPermutation();
-            root = leftTree -> _merge(rightTree);
-            return;
-        }
-
-        if (r == root -> _sumV - 1) {
-            std::tie(leftTree, rightTree) = (root -> _find(l)) -> split();
-            rightTree = rightTree -> nextPermutation();
-            root = leftTree -> _merge(rightTree);
-            return;
-        }
-
-        std::tie(root, rightTree) = (root -> _find(r + 1)) -> split();
-        std::tie(leftTree, midTree) = (root -> _find(l)) -> split();
-
-        midTree = midTree -> nextPermutation();
-
-        root = leftTree -> _merge(midTree);
-        root = root -> _merge(rightTree);
-    }
-
-    void prevPermutationOnSubsegment(int l, int r) {
-        Node* leftTree;
-        Node* midTree;
-        Node* rightTree;
-
-        if (l == 0 && r == root -> _sumV - 1) {
-            root = root -> prevPermutation();
-            return;
-        }
-
-        if (l == 0) {
-            std::tie(leftTree, rightTree) = (root -> _find(r + 1)) -> split();
-            leftTree = leftTree -> prevPermutation();
-            root = leftTree -> _merge(rightTree);
-            return;
-        }
-
-        if (r == root -> _sumV - 1) {
-            std::tie(leftTree, rightTree) = (root -> _find(l)) -> split();
-            rightTree = rightTree -> prevPermutation();
-            root = leftTree -> _merge(rightTree);
-            return;
-        }
-
-        std::tie(root, rightTree) = (root -> _find(r + 1)) -> split();
-        std::tie(leftTree, midTree) = (root -> _find(l)) -> split();
-
-        midTree = midTree -> prevPermutation();
-
-        root = leftTree -> _merge(midTree);
-        root = root -> _merge(rightTree);
-    }
-
-    void buildOfList(std::istream& input) {
-        int n;
-        input >> n;
-
-        for (int i = 0; i < n; ++i) {
-            long long newX;
-            input >> newX;
-            addNode(i, newX);
-        }
-    }
-
-    void printTree(std::ostream& output) {
-        if (root != nullptr) {
-            root -> dfs(output);
-        }
-    }
-
-    void addNode(int pos, long long newX) {
-        if (root == nullptr) {
-            root = new Node;
-            root -> _x = newX;
-            root -> normalization();
-            return;
-        }
-
-        if (pos == 0) {
-            Node* oldRoot = root;
-            root = new Node;
-            root -> _x = newX;
-            root -> _right = oldRoot;
-            oldRoot -> _par = root;
-            root -> normalization();
-            return;
-        }
-
-        if (pos == root -> _sumV) {
-            Node* oldRoot = root;
-            root = new Node;
-            root -> _x = newX;
-            root -> _left = oldRoot;
-            oldRoot -> _par = root;
-            root -> normalization();
-            return;
-        }
-
-        Node* leftTree;
-        Node* rightTree;
-        std::tie(leftTree, rightTree) = (root -> _find(pos)) -> split();
-
-        root = new Node;
-        root -> _x = newX;
-        root -> _left = leftTree;
-        leftTree -> _par = root;
-        root -> _right = rightTree;
-        rightTree -> _par = root;
-
-        root -> normalization();
-    }
-
-    void deleteX(int deletePos) {
-        root = (root -> _find(deletePos + 1)) -> splay();
-
-        Node* left = root -> _left;
-        Node* right = root -> _right;
-
-        if (right != nullptr) {
-            right -> _par = nullptr;
-        }
-        if (left != nullptr) {
-            left -> _par = nullptr;
-        }
-
-        delete root;
-        if (left == nullptr) {
-            root = right;
-        }
-        else {
-            root = left -> _merge(right);
-        }
-    }
+    void deleteX(int deletePos);
 
 private:
     struct Node {
-    //methods    
-        void push() {
-            if (_assign != maxValue) { //either _assign != maxValue or push != 0
-                if (_left != nullptr) {
-                    _left -> pushAssignInParent();
-                }
-                if (_right != nullptr) {
-                    _right -> pushAssignInParent();
-                }
-                _assign = maxValue;
-            }
+    //methods
+        void deleteAllVertices();
 
-            if (_add  != 0) {
-                if (_left != nullptr) {
-                    _left -> pushAddInParent();
-                }
-                if (_right != nullptr) {
-                    _right -> pushAddInParent();
-                }
-                _add = 0;
-            }
+        void push();
+        void pushAssignInParent();
+        void pushAddInParent();
+        void pushRevInParent();
 
-            if (_rev) {
-                std::swap(_left, _right); // does it work?
-                if (_left != nullptr) {
-                    _left -> pushRevInParent();
-                }
-                if (_right != nullptr) {
-                    _right -> pushRevInParent();
-                }
-                _rev = false;
-            }
-        }
+        void normalization();
+        void normalizationInParent();
+        std::tuple<bool, bool, long long, long long> returnTupleOfSomeValues();
 
-        void pushAssignInParent() {
-            _sumX = _sumV * (_par -> _assign);
-            _add = 0;
-            _assign = _par -> _assign;
-            _x = _par -> _assign;
-            _minX = _par -> _assign;
-            _maxX = _par -> _assign;
-            _isIner = true;
-            _isDecr = true;
-        }
+        void zig(Node* Node::* vertexOnZigDirection, Node* Node::* vertexOnOppositeDirection);
+        void leftZigZig();
+        void rightZigZig();
+        void leftZigZag();
+        void rightZigZag();
+        Node* splay();
 
-        void pushAddInParent() {
-            _sumX += _sumV * (_par -> _add);
-            if (_assign != maxValue) {
-                _assign += _par -> _add;
-            }
-            else {
-                _add += _par -> _add;
-            }
-            _x += _par -> _add;
-            _minX += _par -> _add;
-            _maxX += _par -> _add;
-        }
+        Node* find(long long need);
+        Node* merge(Node* otherNode);
+        std::pair<Node*, Node*> split();
 
-        void pushRevInParent() {
-            _rev ^= 1;
-            std::swap(_isIner, _isDecr);
-        }
+        Node* getSumOnSubtree(long long& sumOnSubtree);
+        Node* initAssign(long long& assignX);
+        Node* initPlus(long long& plusX);
 
-        void normalization() {
-            _sumX = _x;
-            _sumV = 1;
-            _maxX = _x;
-            _minX = _x;
+        void dfs(std::vector<long long>& vectorOfX);
 
-            bool isLeftIner = true, isLeftDecr = true, isRightIner = true, isRightDecr = true;
-            long long leftMinX = maxValue, leftMaxX = -maxValue, rightMinX = maxValue, rightMaxX = -maxValue;
+        void correctChilds();
 
-            if (_left != nullptr) {
-                _left -> normalizationInParent();
-                std::tie(isLeftIner, isLeftDecr, leftMinX, leftMaxX) = _left -> returnTupleOfSomeValues();
-            }
-            if (_right != nullptr) {
-                _right -> normalizationInParent();
-                std::tie(isRightIner, isRightDecr, rightMinX, rightMaxX) = _right -> returnTupleOfSomeValues();
-            }
-
-            _isIner = (isLeftIner && isRightIner && leftMaxX <= _x && _x <= rightMinX);
-            _isDecr = (isLeftDecr && isRightDecr && leftMinX >= _x && _x >= rightMaxX);
-        }
-
-        void normalizationInParent() {
-            _par -> _sumX += _sumX;
-            _par -> _sumV += _sumV;
-            _par -> _minX = std::min(_par -> _minX, _minX);
-            _par -> _maxX = std::max(_par -> _maxX, _maxX);
-        }
-
-        std::tuple<bool, bool, long long, long long> returnTupleOfSomeValues() {
-            return std::make_tuple(_isIner, _isDecr, _minX, _maxX);
-        }
-
-        void zig(Node* Node::* vertexOnZigDirection, Node* Node::* vertexOnOppositeDirection) {
-            Node* par = _par;
-            _par -> push();
-            push();
-
-            par ->*vertexOnZigDirection = this->*vertexOnOppositeDirection;
-            this->*vertexOnOppositeDirection = par;
-            _par = par -> _par;
-            par -> _par = this;
-
-            if (par ->*vertexOnZigDirection != nullptr) {
-                (par->*vertexOnZigDirection) -> _par = par;
-            }
-            if (_par != nullptr) {
-                if (_par ->*vertexOnZigDirection == par) {
-                    _par ->*vertexOnZigDirection = this;
-                }
-                else {
-                    _par->*vertexOnOppositeDirection = this;
-                }
-            }
-
-            par -> normalization();
-            normalization();
-
-
-        }
-
-        void leftZigZig() {
-            Node* par = _par;
-            par -> zig(&Node::_left, &Node::_right);
-            zig(&Node::_left, &Node::_right);
-        }
-
-        void rightZigZig() {
-            Node* par = _par;
-            par -> zig(&Node::_right, &Node::_left);
-            zig(&Node::_right, &Node::_left);
-        }
-
-        void leftZigZag() {
-            zig(&Node::_right, &Node::_left);            
-            zig(&Node::_left, &Node::_right);
-        }
-
-        void rightZigZag() {
-            zig(&Node::_left, &Node::_right);
-            zig(&Node::_right, &Node::_left);
-        }
-
-        Node* splay() {
-            while (_par != nullptr) {
-                if (_par -> _par == nullptr) {
-                    if (_par -> _left == this) {
-                        zig(&Node::_left, &Node::_right);
-                    }
-                    else {
-                        zig(&Node::_right, &Node::_left);
-                    }
-                }
-                else {
-                    Node* granny = _par -> _par;
-                    if (granny -> _left == _par) {
-                        if (_par -> _left == this) {
-                            leftZigZig();
-                        }
-                        else {
-                            leftZigZag();
-                        }
-                    }
-                    else {
-                        if (_par -> _right == this) {
-                            rightZigZig();
-                        }
-                        else {
-                            rightZigZag();
-                        }
-                    }
-                }
-            }
-            return this;
-        }
-
-        Node* _find(long long need) {
-            push();
-
-            if (_left != nullptr && _left -> _sumV >= need) {
-                return _left -> _find(need);
-            }
-            else if (_left != nullptr && need == _left -> _sumV + 1 || _left == nullptr && need == 1) {
-                return this;
-            }
-            else {
-                long long sumInLeft = (_left == nullptr) ? 0 : _left -> _sumV;
-                return _right -> _find(need - 1 - sumInLeft);
-            }
-        }
-
-        Node* _merge(Node* otherNode) {
-            if (otherNode == nullptr) {
-                return this;
-            }
-
-            Node* nodeMax1 = _find(_sumV);
-            nodeMax1 -> splay();
-
-            nodeMax1 -> _right = otherNode;
-            otherNode -> _par = nodeMax1;
-            nodeMax1 -> normalization();
-            return nodeMax1;
-        }
-
-        std::pair<Node*, Node*> split() { // 'this' is nodeSplit
-            splay();
-
-            Node* node2 = _right;
-            if (node2 == nullptr) {
-                return {this, nullptr};
-            }
-
-            _right = nullptr;
-            node2 -> _par = nullptr;
-            normalization();
-
-            return {this, node2};
-        }
-
-        void initAssign(long long assignX) {
-            _sumX = _sumV * assignX;
-            _add = 0;
-            _assign = assignX;
-            _x = assignX;
-            _minX = assignX;
-            _maxX = assignX;
-            _isIner = true;
-            _isDecr = true;
-        }
-
-        void initPlus(long long plusX) {
-            _sumX += _sumV * plusX;
-            if (_assign != maxValue) {
-                _assign += plusX;
-            }
-            else {
-                _add += plusX;
-            }
-            _x += plusX;
-            _minX += plusX;
-            _maxX += plusX;
-        }
-
-        void dfs(std::ostream& output) {
-            push();
-            if (_left != nullptr) {
-                _left -> dfs(output);
-            }
-            output << _x << ' ';
-            if (_right != nullptr) {
-                _right -> dfs(output);
-            }
-        }
-
-        void correctChilds() {
-            if (_left != nullptr) {
-                _left -> _par = this;
-            }
-            if (_right != nullptr) {
-                _right -> _par = this;
-            }
-        }
-
-        Node* permute(bool Node::* typeOfMonotony, bool (* compare)(long long, long long), long long lastX, long long Node::* extremeValue1, long long Node::* extremeValue2) {
-            if (this->*typeOfMonotony) {
-                _rev ^= 1;
-                push();
-                normalization();
-                return this;
-            }
-
-            Node* curNode = this;
-            while (true) {
-                curNode -> push();
-                Node* right = curNode -> _right;
-                if (right != nullptr && (!(right->*typeOfMonotony) || (right->*typeOfMonotony) && compare(right->*extremeValue2, lastX))) {
-                    curNode = right;
-                }
-                else if (right != nullptr && right->*typeOfMonotony && compare(curNode -> _x, right->*extremeValue1) ||
-                         right == nullptr && curNode -> _par != nullptr && curNode -> _par -> _left == curNode && compare(curNode -> _x, curNode -> _par -> _x) ||
-                         right == nullptr && curNode -> _par != nullptr && curNode -> _par -> _right == curNode && compare(curNode -> _x, lastX)) {
-                    break;
-                }
-                else {
-                    lastX = curNode -> _x;
-                    curNode = curNode -> _left;
-                }
-            }
-            
-            curNode -> splay();
-
-            Node* leftTree = curNode -> _left;
-            if (leftTree != nullptr) {
-                leftTree -> _par = nullptr;
-            }
-            curNode -> _left = nullptr;
-            
-            Node* inflectionNode = curNode;
-            curNode = inflectionNode -> _right;
-            curNode -> _par = nullptr;
-            inflectionNode -> _right = nullptr;
-            
-            while (true) {
-                curNode -> push();
-                Node* right = curNode -> _right;
-                if (right != nullptr && compare(inflectionNode -> _x, right->*extremeValue1)) {
-                    curNode = right;
-                }
-                else if (compare(inflectionNode -> _x, curNode -> _x)) {
-                    break;
-                }
-                else {
-                    curNode = curNode -> _left;
-                }
-            }
-            
-            curNode -> splay();
-
-            std::swap(curNode -> _left, inflectionNode -> _left);
-            std::swap(curNode -> _right, inflectionNode -> _right);
-            curNode -> correctChilds();
-            inflectionNode -> correctChilds();
-
-            curNode -> normalization();
-            inflectionNode -> _rev ^= 1;
-            inflectionNode -> push();
-            inflectionNode -> normalization();
-
-            if (leftTree != nullptr) {
-                leftTree = leftTree -> _merge(curNode);
-            }
-            else {
-                leftTree = curNode;
-            }
-            
-            if (leftTree != nullptr) {
-                leftTree = leftTree -> _merge(inflectionNode);
-            }
-            else {
-                leftTree = inflectionNode;
-            }
-            return leftTree;
-        }
-
-        Node* nextPermutation() {
-            return permute(&Node::_isDecr, isLess, -maxValue, &Node::_maxX, &Node::_minX);
-        }
-
-        Node* prevPermutation() {
-            return permute(&Node::_isIner, isGreater, maxValue, &Node::_minX, &Node::_maxX);
-        }
+        Node* permute(bool Node::* typeOfMonotony, bool (* compare)(long long, long long), long long lastX, long long Node::* extremeValue1, long long Node::* extremeValue2);
+        Node* makeInflectionNodeOfThisNode(bool Node::* typeOfMonotony, bool (* compare)(long long, long long), long long lastX, long long Node::* extremeValue1, long long Node::* extremeValue2);
+        Node* findANewPlaceForInflectionNode(bool (* compare)(long long, long long), long long Node::* extremeValue1, Node* inflectionNode);
+        Node* nextPermutation();
+        Node* prevPermutation();
     //fields
         static const long long maxValue = (long long)1e15;
 
-        Node* _par = nullptr;
-        Node* _left = nullptr;
-        Node* _right = nullptr;
+        Node* par = nullptr;
+        Node* left = nullptr;
+        Node* right = nullptr;
 
-        long long _sumX = 0;
-        long long _sumV = 0;
-        long long _add = 0;
-        long long _assign = maxValue;
-        long long _x;
-        bool _rev = false;
+        long long sumX = 0;
+        long long sumV = 0;
+        long long add = 0;
+        long long assign = maxValue;
+        long long x;
+        bool rev = false;
 
-        long long _maxX = -maxValue;
-        long long _minX = maxValue;
-        bool _isIner = true;
-        bool _isDecr = true;
+        long long maxX = -maxValue;
+        long long minX = maxValue;
+        bool isIner = true;
+        bool isDecr = true;
     };
 
-    Node* root = nullptr;
+    Node* _root = nullptr;
 };
+
+SplayTree:: ~SplayTree() {
+    _root -> deleteAllVertices();
+}
+
+long long SplayTree::getSumOnSubsegment(int l, int r) {
+    long long sumOnSubsegment;
+    doFunctionOnSubsegment(l, r, &Node::getSumOnSubtree, sumOnSubsegment);
+    return sumOnSubsegment;
+}
+
+void SplayTree::assignOnSubsegment(int l, int r, long long& assignX) {
+    doFunctionOnSubsegment<long long>(l, r, &Node::initAssign, assignX);
+}
+
+void SplayTree::plusOnSubsegment(int l, int r, long long& plusX) {
+    doFunctionOnSubsegment<long long>(l, r, &Node::initPlus, plusX);
+}
+
+void SplayTree::nextPermutationOnSubsegment(int l, int r) {
+    doFunctionOnSubsegment<>(l, r, &Node::nextPermutation);
+}
+
+void SplayTree::prevPermutationOnSubsegment(int l, int r) {
+    doFunctionOnSubsegment<>(l, r, &Node::prevPermutation);
+}
+
+template<typename... Args>
+void SplayTree::doFunctionOnSubsegment(int l, int r, SplayTree::Node* (SplayTree::Node::* func)(Args&... args), Args&... args) {
+    Node* leftTree;
+    Node* midTree;
+    Node* rightTree;
+
+    if (l == 0 && r == _root -> sumV - 1) {
+        _root = (_root->*func)(args...);
+        return;
+    }
+
+    if (l == 0) {
+        std::tie(leftTree, rightTree) = (_root -> find(r + 1)) -> split();
+        leftTree = (leftTree->*func)(args...);
+        _root = leftTree -> merge(rightTree);
+        return;
+    }
+
+    if (r == _root -> sumV - 1) {
+        std::tie(leftTree, rightTree) = (_root -> find(l)) -> split();
+        rightTree = (rightTree->*func)(args...);
+        _root = leftTree -> merge(rightTree);
+        return;
+    }
+
+    std::tie(_root, rightTree) = (_root -> find(r + 1)) -> split();
+    std::tie(leftTree, midTree) = (_root -> find(l)) -> split();
+
+    midTree = (midTree->*func)(args...);
+
+    _root = leftTree -> merge(midTree);
+    _root = _root -> merge(rightTree);
+}
+
+void SplayTree::buildOfVector(const std::vector<long long>& vectorOfX) {
+    for (size_t i = 0; i < vectorOfX.size(); ++i) {
+        addNode(static_cast<int>(i), vectorOfX[i]);
+    }
+}
+
+std::vector<long long> SplayTree::getVectorOfX() {
+    std::vector<long long> resVector;
+    if (_root != nullptr) {
+        _root -> dfs(resVector);
+    }
+    return resVector;
+}
+
+void SplayTree::addNode(int pos, long long newX) {
+    if (_root == nullptr) {
+        _root = new Node;
+        _root -> x = newX;
+        _root -> normalization();
+        return;
+    }
+
+    if (pos == 0) {
+        Node* oldRoot = _root;
+        _root = new Node;
+        _root -> x = newX;
+        _root -> right = oldRoot;
+        oldRoot -> par = _root;
+        _root -> normalization();
+        return;
+    }
+
+    if (pos == _root -> sumV) {
+        Node* oldRoot = _root;
+        _root = new Node;
+        _root -> x = newX;
+        _root -> left = oldRoot;
+        oldRoot -> par = _root;
+        _root -> normalization();
+        return;
+    }
+
+    Node* leftTree;
+    Node* rightTree;
+    std::tie(leftTree, rightTree) = (_root -> find(pos)) -> split();
+
+    _root = new Node;
+    _root -> x = newX;
+    _root -> left = leftTree;
+    leftTree -> par = _root;
+    _root -> right = rightTree;
+    rightTree -> par = _root;
+
+    _root -> normalization();
+}
+
+void SplayTree::deleteX(int deletePos) {
+    _root = (_root -> find(deletePos + 1)) -> splay();
+
+    Node* left = _root -> left;
+    Node* right = _root -> right;
+
+    if (right != nullptr) {
+        right -> par = nullptr;
+    }
+    if (left != nullptr) {
+        left -> par = nullptr;
+    }
+
+    delete _root;
+    if (left == nullptr) {
+        _root = right;
+    }
+    else {
+        _root = left -> merge(right);
+    }
+}
+
+void SplayTree::Node::deleteAllVertices() {
+    if (left != nullptr) {
+        left -> deleteAllVertices();
+    }
+    if (right != nullptr) {
+        right -> deleteAllVertices();
+    }
+
+    delete this;
+}
+
+void SplayTree::Node::push() {
+    if (assign != maxValue) { 
+        if (left != nullptr) {
+            left -> pushAssignInParent();
+        }
+        if (right != nullptr) {
+            right -> pushAssignInParent();
+        }
+        assign = maxValue;
+    }
+
+    if (add  != 0) {
+        if (left != nullptr) {
+            left -> pushAddInParent();
+        }
+        if (right != nullptr) {
+            right -> pushAddInParent();
+        }
+        add = 0;
+    }
+
+    if (rev) {
+        std::swap(left, right); // does it work?
+        if (left != nullptr) {
+            left -> pushRevInParent();
+        }
+        if (right != nullptr) {
+            right -> pushRevInParent();
+        }
+        rev = false;
+    }
+}
+
+void SplayTree::Node::pushAssignInParent() {
+    sumX = sumV * (par -> assign);
+    add = 0;
+    assign = par -> assign;
+    x = par -> assign;
+    minX = par -> assign;
+    maxX = par -> assign;
+    isIner = true;
+    isDecr = true;
+}
+
+void SplayTree::Node::pushAddInParent() {
+    sumX += sumV * (par -> add);
+    if (assign != maxValue) {
+        assign += par -> add;
+    }
+    else {
+        add += par -> add;
+    }
+    x += par -> add;
+    minX += par -> add;
+    maxX += par -> add;
+}
+
+void SplayTree::Node::pushRevInParent() {
+    rev ^= 1;
+    std::swap(isIner, isDecr);
+}
+
+void SplayTree::Node::normalization() {
+    sumX = x;
+    sumV = 1;
+    maxX = x;
+    minX = x;
+
+    bool isLeftIner = true, isLeftDecr = true, isRightIner = true, isRightDecr = true;
+    long long leftMinX = maxValue, leftMaxX = -maxValue, rightMinX = maxValue, rightMaxX = -maxValue;
+
+    if (left != nullptr) {
+        left -> normalizationInParent();
+        std::tie(isLeftIner, isLeftDecr, leftMinX, leftMaxX) = left -> returnTupleOfSomeValues();
+    }
+    if (right != nullptr) {
+        right -> normalizationInParent();
+        std::tie(isRightIner, isRightDecr, rightMinX, rightMaxX) = right -> returnTupleOfSomeValues();
+    }
+
+    isIner = (isLeftIner && isRightIner && leftMaxX <= x && x <= rightMinX);
+    isDecr = (isLeftDecr && isRightDecr && leftMinX >= x && x >= rightMaxX);
+}
+
+void SplayTree::Node::normalizationInParent() {
+    par -> sumX += sumX;
+    par -> sumV += sumV;
+    par -> minX = std::min(par -> minX, minX);
+    par -> maxX = std::max(par -> maxX, maxX);
+}
+
+std::tuple<bool, bool, long long, long long> SplayTree::Node::returnTupleOfSomeValues() {
+    return std::make_tuple(isIner, isDecr, minX, maxX);
+}
+
+void SplayTree::Node::zig(Node* Node::* vertexOnZigDirection, Node* Node::* vertexOnOppositeDirection) {
+    Node* _par = par;
+    par -> push();
+    push();
+
+    _par ->*vertexOnZigDirection = this->*vertexOnOppositeDirection;
+    this->*vertexOnOppositeDirection = _par;
+    par = _par -> par;
+    _par -> par = this;
+
+    if (_par ->*vertexOnZigDirection != nullptr) {
+        (_par->*vertexOnZigDirection) -> par = _par;
+    }
+    if (par != nullptr) {
+        if (par ->*vertexOnZigDirection == _par) {
+            par ->*vertexOnZigDirection = this;
+        }
+        else {
+            par->*vertexOnOppositeDirection = this;
+        }
+    }
+
+    _par -> normalization();
+    normalization();
+}
+
+void SplayTree::Node::leftZigZig() {
+    Node* _par = par;
+    _par -> zig(&Node::left, &Node::right);
+    zig(&Node::left, &Node::right);
+}
+
+void SplayTree::Node::rightZigZig() {
+    Node* _par = par;
+    _par -> zig(&Node::right, &Node::left);
+    zig(&Node::right, &Node::left);
+}
+
+void SplayTree::Node::leftZigZag() {
+    zig(&Node::right, &Node::left);            
+    zig(&Node::left, &Node::right);
+}
+
+void SplayTree::Node::rightZigZag() {
+    zig(&Node::left, &Node::right);
+    zig(&Node::right, &Node::left);
+}
+
+SplayTree::Node* SplayTree::Node::splay() {
+    while (par != nullptr) {
+        if (par -> par == nullptr) {
+            if (par -> left == this) {
+                zig(&Node::left, &Node::right);
+            }
+            else {
+                zig(&Node::right, &Node::left);   
+            }
+        }
+        else {
+            Node* granny = par -> par;
+            if (granny -> left == par) {
+                if (par -> left == this) {
+                    leftZigZig();
+                }
+                else {
+                    leftZigZag();
+                }
+            }
+            else {
+                if (par -> right == this) {
+                    rightZigZig();
+                }
+                else {
+                    rightZigZag();
+                }
+            }
+        }
+    }
+    return this;
+}
+
+SplayTree::Node* SplayTree::Node::find(long long need) {
+    push();
+
+    if (left != nullptr && left -> sumV >= need) {
+        return left -> find(need);
+    }
+    else if (left != nullptr && need == left -> sumV + 1 || left == nullptr && need == 1) {
+        return this;
+    }
+    else {
+        long long sumInLeft = (left == nullptr) ? 0 : left -> sumV;
+        return right -> find(need - 1 - sumInLeft);
+    }
+}
+
+SplayTree::Node* SplayTree::Node::merge(Node* otherNode) {
+    if (otherNode == nullptr) {
+        return this;
+    }
+
+    Node* nodeMax1 = find(sumV);
+    nodeMax1 -> splay();
+
+    nodeMax1 -> right = otherNode;
+    otherNode -> par = nodeMax1;
+    nodeMax1 -> normalization();
+    return nodeMax1;
+}
+
+std::pair<SplayTree::Node*, SplayTree::Node*> SplayTree::Node::split() { // 'this' is nodeSplit
+    splay();
+
+    Node* node2 = right;
+    if (node2 == nullptr) {
+        return {this, nullptr};
+    }
+
+    right = nullptr;
+    node2 -> par = nullptr;
+    normalization();
+
+    return {this, node2};
+}
+
+SplayTree::Node* SplayTree::Node::getSumOnSubtree(long long& sumOnSubtree) {
+    sumOnSubtree = sumX;
+    return this;
+}
+
+SplayTree::Node* SplayTree::Node::initAssign(long long& assignX) {
+    sumX = sumV * assignX;
+    add = 0;
+    assign = assignX;
+    x = assignX;
+    minX = assignX;
+    maxX = assignX;
+    isIner = true;
+    isDecr = true;
+    return this;
+}
+
+SplayTree::Node* SplayTree::Node::initPlus(long long& plusX) {
+    sumX += sumV * plusX;
+    if (assign != maxValue) {
+        assign += plusX;
+    }
+    else {
+        add += plusX;
+    }
+    x += plusX;
+    minX += plusX;
+    maxX += plusX;
+    return this;
+}
+
+void SplayTree::Node::dfs(std::vector<long long>& vectorOfX) {
+    push();
+    if (left != nullptr) {
+        left -> dfs(vectorOfX);
+    }
+    vectorOfX.push_back(x);
+    if (right != nullptr) {
+        right -> dfs(vectorOfX);
+    }
+}
+
+void SplayTree::Node::correctChilds() {
+    if (left != nullptr) {
+        left -> par = this;
+    }
+    if (right != nullptr) {
+        right -> par = this;
+    }
+}
+
+SplayTree::Node* SplayTree::Node::permute(bool Node::* typeOfMonotony, bool (* compare)(long long, long long), long long lastX, long long Node::* extremeValue1, long long Node::* extremeValue2) {
+    if (this->*typeOfMonotony) {
+        rev ^= 1;
+        push();
+        normalization();
+        return this;
+    }
+
+    Node* curNode = makeInflectionNodeOfThisNode(typeOfMonotony, compare, lastX, extremeValue1, extremeValue2);
+
+    Node* leftTree = curNode -> left;
+    if (leftTree != nullptr) {
+        leftTree -> par = nullptr;
+    }
+    curNode -> left = nullptr;
+    
+    Node* inflectionNode = curNode;
+    curNode = inflectionNode -> right;
+    curNode -> par = nullptr;
+    inflectionNode -> right = nullptr;
+    
+    curNode = curNode -> findANewPlaceForInflectionNode(compare, extremeValue1, inflectionNode);
+
+    std::swap(curNode -> left, inflectionNode -> left);
+    std::swap(curNode -> right, inflectionNode -> right);
+    curNode -> correctChilds();
+    inflectionNode -> correctChilds();
+
+    curNode -> normalization();
+    inflectionNode -> rev ^= 1;
+    inflectionNode -> push();
+    inflectionNode -> normalization();
+
+    if (leftTree != nullptr) {
+        leftTree = leftTree -> merge(curNode);
+    }
+    else {
+        leftTree = curNode;
+    }
+    
+    if (leftTree != nullptr) {
+        leftTree = leftTree -> merge(inflectionNode);
+    }
+    else {
+        leftTree = inflectionNode;
+    }
+    return leftTree;
+}
+
+SplayTree::Node* SplayTree::Node::makeInflectionNodeOfThisNode(bool Node::* typeOfMonotony, bool (* compare)(long long, long long), long long lastX, long long Node::* extremeValue1, long long Node::* extremeValue2) {
+    Node* curNode = this;
+    while (true) {
+        curNode -> push();
+        Node* _right = curNode -> right;
+        if (_right != nullptr && (!(_right->*typeOfMonotony) || (_right->*typeOfMonotony) && compare(_right->*extremeValue2, lastX))) {
+            curNode = _right;
+        }
+        else if (_right != nullptr && _right->*typeOfMonotony && compare(curNode -> x, _right->*extremeValue1) ||
+                 _right == nullptr && curNode -> par != nullptr && curNode -> par -> left == curNode && compare(curNode -> x, curNode -> par -> x) ||
+                 _right == nullptr && curNode -> par != nullptr && curNode -> par -> right == curNode && compare(curNode -> x, lastX)) {
+            break;
+        }
+        else {
+            lastX = curNode -> x;
+            curNode = curNode -> left;
+        }
+    }
+    
+    curNode -> splay();
+
+    return curNode;
+}
+
+SplayTree::Node* SplayTree::Node::findANewPlaceForInflectionNode(bool (* compare)(long long, long long), long long Node::* extremeValue1, Node* inflectionNode) {
+    Node* curNode = this;
+    while (true) {
+        curNode -> push();
+        Node* _right = curNode -> right;
+        if (_right != nullptr && compare(inflectionNode -> x, _right->*extremeValue1)) {
+            curNode = _right;
+        }
+        else if (compare(inflectionNode -> x, curNode -> x)) {
+            break;
+        }
+        else {
+            curNode = curNode -> left;
+        }
+    }
+
+    curNode -> splay();
+
+    return curNode;
+}
+
+SplayTree::Node* SplayTree::Node::nextPermutation() {
+    return permute(&Node::isDecr, isLess, -maxValue, &Node::maxX, &Node::minX);
+}
+
+SplayTree::Node* SplayTree::Node::prevPermutation() {
+    return permute(&Node::isIner, isGreater, maxValue, &Node::minX, &Node::maxX);
+}
 
 void solve(std::istream& input, std::ostream& output) {
     SplayTree tree;
-    tree.buildOfList(input);
+
+    int n;
+    input >> n;
+    std::vector<long long> inputVectorOfX(n);
+    for (int i = 0; i < n; ++i) {
+        input >> inputVectorOfX[i];
+    }
+    tree.buildOfVector(inputVectorOfX);
 
     int q;
     input >> q;
@@ -651,7 +636,7 @@ void solve(std::istream& input, std::ostream& output) {
         if (t == 1) {
             int l, r;
             input >> l >> r;
-            output << tree.getSumOfSubsegment(l, r) << '\n';
+            output << tree.getSumOnSubsegment(l, r) << '\n';
         }
         else if (t == 2) {
             int newX, pos;
@@ -664,12 +649,14 @@ void solve(std::istream& input, std::ostream& output) {
             tree.deleteX(deletePos);
         }
         else if (t == 4) {
-            int assignX, l, r;
+            int l, r;
+            long long assignX;
             input >> assignX >> l >> r;
             tree.assignOnSubsegment(l, r, assignX);
         }
         else if (t == 5) {
-            int plusX, l, r;
+            int l, r;
+            long long plusX;
             input >> plusX >> l >> r;
             tree.plusOnSubsegment(l, r, plusX);
         }
@@ -685,10 +672,17 @@ void solve(std::istream& input, std::ostream& output) {
         }
     }
 
-    tree.printTree(output);
+    std::vector<long long> vectorOfXInTree = tree.getVectorOfX();
+
+    for (size_t i = 0; i < vectorOfXInTree.size(); ++i) {
+        output << vectorOfXInTree[i] << ' ';
+    }
+
+    vectorOfXInTree.clear();
 }
 
 int main() {
     solve(std::cin, std::cout);
     return 0;
 }
+
