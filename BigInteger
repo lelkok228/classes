@@ -1,0 +1,406 @@
+#pragma once
+
+#include <iostream>
+#include <vector>
+#include <string>
+
+void revCopy_(std::vector<int>::iterator inFirst, std::vector<int>::iterator inLast, std::vector<int>::iterator outFirst) {
+    while (inFirst != inLast) {
+        *outFirst++ = *(--inLast);
+    }
+}
+
+void copy_(std::vector<int>::iterator inFirst, std::vector<int>::iterator inLast, std::vector<int>::iterator outFirst) {
+    while (inFirst != inLast) {
+        *outFirst++ = *inFirst++;
+    }
+}
+
+class BigInteger {
+public:
+
+    BigInteger(int newBigInt = 0);
+    BigInteger(size_t sizeT);
+    BigInteger(const BigInteger& bigInt);
+    BigInteger(std::string strBigInt);
+
+    BigInteger& operator=(const BigInteger& bigInt);
+
+    BigInteger operator-() const;
+
+    BigInteger& operator+=(const BigInteger& bigInt);
+    BigInteger& operator-=(const BigInteger& bigInt);
+
+    BigInteger& operator++();
+    BigInteger& operator--();
+    BigInteger operator++(int);
+    BigInteger operator--(int);
+
+    BigInteger& operator *=(const BigInteger& bigInt);
+    BigInteger& operator/=(const BigInteger& bigInt);
+    BigInteger& operator%=(const BigInteger& bigInt);
+
+    bool isAbsoluteGreater(const BigInteger& bigInt) const;
+    bool isAbsoluteLess(const BigInteger& bigInt) const;
+
+    explicit operator bool() const;
+
+    std::string toString() const;
+
+    friend std::ostream& operator<<(std::ostream& stream, const BigInteger& bigInt);
+    friend std::istream& operator>>(std::istream& stream, BigInteger& bigInt);
+
+    bool operator>(const BigInteger& bigInt) const;
+    bool operator<(const BigInteger& bigInt) const;
+    bool operator==(const BigInteger& bigInt) const;
+    bool operator!=(const BigInteger& bigInt) const;
+    bool operator>=(const BigInteger& bigInt) const;
+    bool operator<=(const BigInteger& bigInt) const;
+
+private:
+    std::vector<int> digits_;
+    int sign_;
+    static const int MAXDIGIT_ = 1000000000;
+    static const size_t MAXLENDIGIT_ = 9;
+
+    size_t getMax_(const BigInteger& bigInt) const;
+
+    bool isZero_() const;
+
+    void sumTwoAbsolutes_(const BigInteger& bigInt);
+    BigInteger differenceTwoAbsolutes_(const BigInteger& bigInt) const;
+
+    void upd_(size_t index, int delta);
+
+    void correctBigInt_();
+
+    int binSearch_(const BigInteger& posBigInt) const;
+};
+
+BigInteger:: BigInteger(int integer)
+    : sign_(integer >= 0 ? 1 : -1)
+{
+
+    integer = abs(integer);
+    digits_.push_back(integer % MAXDIGIT_);
+    if (integer >= MAXDIGIT_) {
+        digits_.push_back(integer / MAXDIGIT_);
+    }
+}
+
+BigInteger:: BigInteger(size_t sizeT) {
+    *this = BigInteger(static_cast<int>(sizeT));
+}
+
+BigInteger:: BigInteger(const BigInteger& bigInt) : digits_(bigInt.digits_), sign_(bigInt.sign_) {}
+
+BigInteger:: BigInteger(std::string strBigInt) {
+    sign_ = strBigInt[0] == '-' ? -1 : 1;
+    digits_.clear();
+
+    while (strBigInt.length() && strBigInt.back() != '-') {
+        std::string nowStr = "";
+        while (nowStr.length() < MAXLENDIGIT_ && strBigInt.length() && strBigInt.back() != '-') {
+            nowStr = strBigInt.back() + nowStr;
+            strBigInt.pop_back();
+        }
+
+        int newEl = 0;
+        for (size_t i = 0; i < nowStr.length(); ++i) {
+            newEl = 10 * newEl + (nowStr[i] - '0');
+        }
+        digits_.push_back(newEl);
+    }
+}
+
+BigInteger& BigInteger:: operator=(const BigInteger& bigInt) {
+    if (this == &bigInt) {
+        return *this;
+    }
+
+    sign_ = bigInt.sign_;
+    digits_ = bigInt.digits_;
+    return *this;
+}
+
+BigInteger BigInteger:: operator-() const {
+    BigInteger resBigInt = *this;
+    if (!isZero_()) {
+        resBigInt.sign_ *= -1;
+    }
+    return resBigInt;
+}
+
+BigInteger& BigInteger:: operator+=(const BigInteger& bigInt) {
+    if (sign_ == bigInt.sign_) {
+        sumTwoAbsolutes_(bigInt);
+    }
+    else if (isAbsoluteLess(bigInt)) {
+        *this = bigInt.differenceTwoAbsolutes_(*this);
+    }
+    else {
+        *this = differenceTwoAbsolutes_(bigInt);
+    }
+    return *this;
+}
+
+BigInteger operator+(const BigInteger& first, const BigInteger& second) {
+    BigInteger resBigInt = first;
+    return resBigInt += second;
+}
+
+BigInteger& BigInteger:: operator-=(const BigInteger& bigInt) {
+    return *this += (-bigInt);
+}
+
+BigInteger operator-(const BigInteger& first, const BigInteger& second) {
+    BigInteger resBigInt = first;
+    return resBigInt -= second;
+}
+
+BigInteger& BigInteger:: operator++() {
+    return *this += 1;
+}
+
+BigInteger& BigInteger:: operator--() {
+    return *this -= 1;
+}
+
+BigInteger BigInteger:: operator++(int) {
+    BigInteger resBigInt = *this;
+    *this += 1;
+    return resBigInt;
+}
+
+BigInteger BigInteger:: operator--(int) {
+    BigInteger resBigInt = *this;
+    *this -= 1;
+    return resBigInt;
+}
+
+BigInteger& BigInteger:: operator *=(const BigInteger& bigInt) {
+    BigInteger resBigInt;
+    resBigInt.digits_.assign(digits_.size() + bigInt.digits_.size(), 0);
+    resBigInt.sign_ = sign_ * bigInt.sign_;
+
+    for (size_t i = 0; i < digits_.size(); ++i) {
+        for (size_t j = 0; j < bigInt.digits_.size(); ++j) {
+            long long multi = static_cast<long long>(digits_[i]) * static_cast<long long>(bigInt.digits_[j]);
+            resBigInt.upd_(i + j, multi % MAXDIGIT_);
+            resBigInt.upd_(i + j + 1, multi / MAXDIGIT_);
+        }
+    }
+
+    resBigInt.correctBigInt_();
+    return *this = resBigInt;
+}
+
+BigInteger operator*(const BigInteger& first, const BigInteger& second) {
+    BigInteger resBigInt = first;
+    return resBigInt *= second;
+}
+
+bool BigInteger:: isAbsoluteGreater(const BigInteger& bigInt) const {
+    if (digits_.size() != bigInt.digits_.size()) {
+        return digits_.size() > bigInt.digits_.size();
+    }
+    for (size_t i = 0; i < digits_.size(); ++i) {
+        size_t indexDigit = digits_.size() - i - 1;
+        if (digits_[indexDigit] != bigInt.digits_[indexDigit]) {
+            return digits_[indexDigit] > bigInt.digits_[indexDigit];
+        }
+    }
+
+    return false;
+}
+
+bool BigInteger:: isAbsoluteLess(const BigInteger& bigInt) const {
+    return bigInt.isAbsoluteGreater(*this);
+}
+
+BigInteger:: operator bool() const {
+    return !isZero_();
+}
+
+std::string BigInteger:: toString() const {
+    std::string resString = "";
+    if (sign_ == -1) {
+        resString += "-";
+    }
+
+    for (size_t i = 0; i < digits_.size(); ++i) {
+        std::string newStr = std::to_string(digits_[digits_.size() - i - 1]);
+        if (i) {
+            while (newStr.size() != MAXLENDIGIT_) {
+                newStr = "0" + newStr;
+            }
+        }
+        resString += newStr;
+    }
+    return resString;
+}
+
+std::ostream& operator<<(std::ostream& stream, const BigInteger& bigInt) {
+    stream << bigInt.toString();
+    return stream;
+}
+
+std::istream& operator>>(std::istream& stream, BigInteger& bigInt) {
+    std::string str;
+    stream >> str;
+    bigInt = str;
+    return stream;
+}
+
+size_t BigInteger:: getMax_(const BigInteger& bigInt) const {
+    return digits_.size() > bigInt.digits_.size() ? digits_.size() : bigInt.digits_.size();
+}
+
+bool BigInteger:: isZero_() const {
+    return digits_.back() == 0;
+}
+
+void BigInteger:: sumTwoAbsolutes_(const BigInteger& bigInt) {
+    digits_.resize(getMax_(bigInt), 0);
+    int delta = 0;
+
+    for (size_t i = 0; i < getMax_(bigInt); i++) {
+        digits_[i] += delta;
+        if (i < bigInt.digits_.size()) {
+            digits_[i] += bigInt.digits_[i];
+        }
+
+        delta = 0;
+
+        if (digits_[i] >= MAXDIGIT_) {
+            delta = 1;
+            digits_[i] -= MAXDIGIT_;
+        }
+    }
+
+    if (delta != 0) {
+            digits_.push_back(delta);
+    }
+}
+
+BigInteger BigInteger:: differenceTwoAbsolutes_(const BigInteger& bigInt) const {
+    BigInteger resBigInt = *this;
+    int delta = 0;
+
+    for (size_t i = 0; i < digits_.size(); i++) {
+        resBigInt.digits_[i] += delta;
+        if (i < bigInt.digits_.size()) {
+            resBigInt.digits_[i] -= bigInt.digits_[i];
+        }
+
+        delta = 0;
+        if (resBigInt.digits_[i] < 0) {
+            delta = -1;
+            resBigInt.digits_[i] += MAXDIGIT_;
+        }
+    }
+
+    resBigInt.correctBigInt_();
+    return resBigInt;
+}
+
+void BigInteger:: upd_(size_t index, int delta) {
+    digits_[index] += delta;
+    if (digits_[index] >= MAXDIGIT_) {
+        digits_[index] -= MAXDIGIT_;
+        digits_[index + 1] += 1;
+    }
+}
+
+void BigInteger:: correctBigInt_() {
+    while (digits_.size() > 1 && !digits_.back()) {
+        digits_.pop_back();
+    }
+    if (isZero_()) {
+        sign_ = 1;
+    }
+}
+
+int BigInteger:: binSearch_(const BigInteger& posBigInt) const {
+    int left = 0, right = MAXDIGIT_;
+    while (right - left > 1) {
+        int mid = (left + right) / 2;
+        if (!isAbsoluteLess(posBigInt * mid)) {
+            left = mid;
+        }
+        else {
+            right = mid;
+        }
+    }
+    return left;
+}
+
+BigInteger& BigInteger:: operator/=(const BigInteger& bigInt) {
+    if (digits_.size() < bigInt.digits_.size()) {
+        return *this = 0;
+    }
+
+    BigInteger curBigInt;
+    curBigInt.digits_.assign(bigInt.digits_.size(), 0);
+    copy_(digits_.end() - curBigInt.digits_.size(), digits_.end(), curBigInt.digits_.begin());
+
+    BigInteger posBigInt = bigInt;
+    posBigInt.sign_ *= posBigInt.sign_;
+    std::vector<int> revResDigits_;
+    revResDigits_.push_back(curBigInt.binSearch_(posBigInt));
+
+    for (size_t i = bigInt.digits_.size(); i < digits_.size(); ++i) {
+        curBigInt = MAXDIGIT_ * (curBigInt - posBigInt * revResDigits_.back()) + digits_[digits_.size() - i - 1];
+        revResDigits_.push_back(curBigInt.binSearch_(posBigInt));
+    }
+
+    BigInteger resBigInt;
+    resBigInt.digits_.assign(revResDigits_.size(), 0);
+    revCopy_(revResDigits_.begin(), revResDigits_.end(), resBigInt.digits_.begin());
+    resBigInt.sign_ = sign_ * bigInt.sign_;
+
+    resBigInt.correctBigInt_();
+
+    return *this = resBigInt;
+}
+
+BigInteger operator/(const BigInteger& first, const BigInteger& second) {
+    BigInteger resBigInt = first;
+    return resBigInt /= second;
+}
+
+BigInteger& BigInteger:: operator%=(const BigInteger& bigInt) {
+    return *this = *this - (*this / bigInt) * bigInt;
+}
+
+BigInteger operator%(const BigInteger& first, const BigInteger& second) {
+    BigInteger resBigInt = first;
+    return resBigInt %= second;
+}
+
+bool BigInteger:: operator>(const BigInteger& bigInt) const {
+    if (sign_ != bigInt.sign_) {
+        return sign_ > bigInt.sign_;
+    }
+    return sign_ == 1 ? isAbsoluteGreater(bigInt) : isAbsoluteLess(bigInt);
+}
+
+bool BigInteger:: operator<(const BigInteger& bigInt) const {
+    return bigInt > *this;
+}
+
+bool BigInteger:: operator==(const BigInteger& bigInt) const {
+    return sign_ == bigInt.sign_ && digits_ == bigInt.digits_;
+}
+
+bool BigInteger:: operator!=(const BigInteger& bigInt) const {
+    return !(*this == bigInt);
+}
+
+bool BigInteger:: operator>=(const BigInteger& bigInt) const {
+    return *this > bigInt || *this == bigInt;
+}
+
+bool BigInteger:: operator<=(const BigInteger& bigInt) const {
+    return bigInt >= *this;
+}
